@@ -7,7 +7,7 @@ import os
 class Main_Manager:
     def __init__(self):
         self.Raw_Queue = mp.Queue()
-        self.Data_Getter = dg.Data_Getter(5,self.Raw_Queue)
+        self.Data_Getter = dg.Data_Getter(20,self.Raw_Queue)
         self.Interpreted_Queue = mp.Queue()
         self.Data_Interpreter = di.Data_Interpreter(self.Raw_Queue, self.Interpreted_Queue)
         self.Interpret_Process = mp.Process(target=self.Data_Interpreter.run)

@@ -14,8 +14,11 @@ class Data_Visualizer:
         while 1:
             if not self.input.empty():
                 self.current_image = self.input.get_nowait()
+                #print("DATA VIS RECEIVED:",self.current_image)
                 try:
-                    cv2.imshow("Output",self.get_current())
+
+                    cv2.imshow("OUTPUT",self.get_current())
+                    cv2.setWindowProperty("OUTPUT", cv2.WND_PROP_FULLSCREEN,cv2.WINDOW_FULLSCREEN)
                 except Exception as ex:
                     print("Error in Visualizer: ", ex)
                 if cv2.waitKey(10) == 27:

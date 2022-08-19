@@ -29,7 +29,7 @@ def pretty_depth_cv(depth):
     Returns:
         An opencv image who's datatype is unspecified
     """
-    import cv
+    import cv2 as cv
     depth = pretty_depth(depth)
     image = cv.CreateImageHeader((depth.shape[1], depth.shape[0]),
                                  cv.IPL_DEPTH_8U,
