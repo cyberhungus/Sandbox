@@ -11,14 +11,19 @@ class Data_Interpreter(Thread):
         self.output = output_queue
         self.waterlevel = 150         
                 
+
+    def run(self):
+        while 1:
+            if not self.input.empty():
+                new_data = self.input.get_nowait()
+                processed_data = self.interpret_data(new_data)
+                self.output.put_nowait(processed_data)
+
     def interpret_data(self, data):
         #make the grayscale data into a rgb data array and apply filters
         print("interpreting data")
         work_data = self.do_pretty_rgb(data)
-        #col_data = self.do_height_calc(work_data)
-
-        col_data=work_data
-        
+        col_data = self.do_height_calc(work_data)
         return col_data
     
     #this function does some neccessary conversions, putting the 
@@ -30,15 +35,15 @@ class Data_Interpreter(Thread):
         
     #this function shall launch sets of threads which perform the neccessary calculations for each row of pixels, thereby speeding up transofrmation 
     def do_height_calc(self, data):
-        for row in rgb_array:
-            self.pixel_transform
+        for row in np.nditer(data):
+            print(row)
+            row=self.pixel_transform(row)
 
-
-
-        return rgb_array            
+        return data         
 
     #function receives a row and analyses for height
     def pixel_transform(self,row):
+            print(type(row))
             for pixel in row:
                 #initially all pixels have the same value on all colours
                 #therefore, check pixel[0] to see what the depth of the pixel ist

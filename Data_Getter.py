@@ -6,11 +6,11 @@ import cv2
 #freq = how many refreshes per second
 #output_queue = queue to pass data to data visualizer 
 class Data_Getter:
-    def __init__(self, freq, main_manager):
+    def __init__(self, freq, output_queue):
         self.freq = freq
         self.ms_delay = 1000/self.freq 
         print("Capture Delay", self.ms_delay)
-        self.manager = main_manager
+        self.output = output_queue
         self.next_capture_time = 0 
         self.runner = Thread(target=self.get_Data)
         self.runner.start()
@@ -27,7 +27,8 @@ class Data_Getter:
                     captured_data =fn.sync_get_depth()[0]
                     
                     self.next_capture_time = self.current_milli_time()+self.ms_delay
-                    self.manager.register_new_data(captured_data)
+
+                    self.output.put_nowait(captured_data)
                     print("NEW DATA")
                     #cv2.imshow("RAW DATA",captured_data)
                 except Exception as ex:
