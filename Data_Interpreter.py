@@ -1,18 +1,22 @@
+from cgi import test
+from dis import pretty_flags
+from distutils.fancy_getopt import FancyGetopt
 from threading import Thread 
 from multiprocessing import Queue
 import frame_convert2 as fc
 import numpy as np
 from PIL import Image, ImageFilter
 import cv2
+import timeit
 
-
+import testcy 
 #this class receives image data via a queue, iterates through the pixels, and changes their colour in accordance with height data 
 class Data_Interpreter(Thread):
-    def __init__(self,input_queue, output_queue):
+    def __init__(self,input_queue, output_queue,is_mock=False):
         self.input = input_queue
         self.output = output_queue
-        self.waterlevel = 230
-
+        self.waterlevel = 150
+        self.is_mock = is_mock
                 
 
     def run(self):
@@ -28,41 +32,65 @@ class Data_Interpreter(Thread):
         #make the grayscale data into a rgb data array and apply filters
         print("interpreting data")
         work_data = self.do_pretty_rgb(data)
-        col_data = self.height_calc_new(work_data)
+        starttime = timeit.default_timer()
+        col_data = self.c_height_calc(work_data)
+        print("Time for color convert algorithm :", timeit.default_timer() - starttime)
         return col_data
     
     #this function does some neccessary conversions, putting the 
     def do_pretty_rgb(self, data):
-        pretty_img = fc.pretty_depth_cv(data)
-        img = Image.fromarray(pretty_img,"L").convert("RGB")
+        if self.is_mock==False:
+            pretty_img = fc.pretty_depth_cv(data)
+            img = pretty_img
+        else:
+            #img = Image.fromarray(data,"L").convert("RGB")
+            img=data
         #.filter(ImageFilter.EDGE_ENHANCE)
         rgb_array = np.array(img)
         return rgb_array
         
-    def height_calc_new(self,data):
 
-        data[np.where((data>=[self.waterlevel,self.waterlevel,self.waterlevel]).all(axis=2))] = [250,0,0]
-        #data[np.where((data<=[self.waterlevel+10,self.waterlevel+10,self.waterlevel+10]).all(axis=2))] =[150,self.waterlevel,]
-        #data[np.where((data<=[self.waterlevel,self.waterlevel,self.waterlevel]).all(axis=2))] =[0,self.waterlevel,0]
-        #data[(np.where((data >= [self.waterlevel+10,self.waterlevel+10,self.waterlevel+10]).all(axis=2) & (data <= [self.waterlevel+20,self.waterlevel+20,self.waterlevel+20]).all(axis=2)))]=[50,self.waterlevel,60]
-        for num in range (170,self.waterlevel):
-            #data[np.all(data == [num,num,num], axis=-1)] = (0,num,0)
-            t = Thread(target=self.pixel_transform_worker,args =(data, num, ))
-            t.start()
+    
+            
+            
+
+
+
+
+    def c_height_calc(self,arr):
+        output = np.zeros((480,640),dtype=np.uint8)
+        mult = self.waterlevel/4
+        mult= int(mult)
+        print(mult,type(mult))
+        water = arr[:,:]>self.waterlevel
+        arr[water] = -1 
+        landA = arr[:,:]>self.waterlevel-mult
+        arr[landA] = -1
+        landB = arr[:,:]>self.waterlevel-(mult*2)
+        arr[landB] = -1
+        landC = arr[:,:]>self.waterlevel-(mult*3)
+        arr[landC] = -1
+        landD = arr[:,:]>self.waterlevel-(mult*4)
+        arr[landD] = -1
+        output[landD] = 250
+        output[landC] = 200
+        output[landB] = 150
+        output[landA] = 100
+        output[water] = 50
+        img = Image.fromarray(output,"L").convert("RGB")
+        data = np.array(img)
+        #landD
+        data[np.all(data == [250,250,250], axis=-1)] = (0,200,100)
+        #landC
+        data[np.all(data == [200,200,200], axis=-1)] = (0,150,100)
+        #landB
+        data[np.all(data == [150,150,150], axis=-1)] = (0,100,100)
+        #landA
+        data[np.all(data == [100,100,100], axis=-1)] = (0,50,0)
+        #water
+        data[np.all(data == [50,50,50], axis=-1)] = (200,50,0)
+        #debug
+        data[np.all(data > [50,50,50], axis=-1)] = (200,50,200)
 
         return data
-        
-    def pixel_transform_worker(self, data, num):
-        if num > self.waterlevel-10:
-            data[np.all(data == [num,num,num], axis=-1)] = (0,0,num+20)
 
-        elif num > self.waterlevel - 20:
-            data[np.all(data == [num,num,num], axis=-1)] = (0,num,num+30) 
-        
-        elif num > self.waterlevel - 30:
-            data[np.all(data == [num,num,num], axis=-1)] = (0,num,num+40) 
-        
-        elif num > self.waterlevel - 40:
-            data[np.all(data == [num,num,num], axis=-1)] = (0,num,num+50) 
-
-        data[np.all(data == [num,num,num], axis=-1)] = (0,num,0)

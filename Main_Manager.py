@@ -7,9 +7,9 @@ import os
 class Main_Manager:
     def __init__(self):
         self.Raw_Queue = mp.Queue()
-        self.Data_Getter = dg.Data_Getter(1.5,self.Raw_Queue)
+        self.Data_Getter = dg.Data_Getter(10,self.Raw_Queue, is_mock=True)
         self.Interpreted_Queue = mp.Queue()
-        self.Data_Interpreter = di.Data_Interpreter(self.Raw_Queue, self.Interpreted_Queue)
+        self.Data_Interpreter = di.Data_Interpreter(self.Raw_Queue, self.Interpreted_Queue,is_mock=True)
         self.Interpret_Process = mp.Process(target=self.Data_Interpreter.run)
         self.Interpret_Process.start()
         self.Data_Visualizer = dv.Data_Visualizer(self.Interpreted_Queue)
@@ -17,10 +17,14 @@ class Main_Manager:
         self.Visualize_Process.start()
         
         
-#gives program maximum ressources 
-os.nice(19)
-print("program start")
-m = Main_Manager()
+if __name__ == '__main__':
+    try:
+        #gives program maximum ressources 
+        os.nice(19)
+    except:
+        print("Not on UNIX, nice isnt needed")
+    print("program start")
+    m = Main_Manager()
         
         
         
