@@ -15,6 +15,7 @@ class Data_Interpreter(Thread):
         self.output = output_queue
         self.waterlevel = 200
         self.is_mock = is_mock
+        self.qrHelp = cv.QRCodeDetector()
                 
 
     def run(self):
@@ -23,6 +24,7 @@ class Data_Interpreter(Thread):
                 new_data = self.input.get_nowait()
                 processed_data_depth = self.interpret_data_depth(new_data[0])
                 analysis_result_list = self.analyze_data_rgb(new_data[1])
+                #analysis_result_list = self.analyze_data_rgb_qr(new_data[1])
 
                 full_img = self.composite_depth_and_rgb(processed_data_depth,analysis_result_list)
                 #processed_data_depth = cv.resize(processed_data_depth,dsize=None,fx=1.5,fy=1.5)
@@ -32,6 +34,13 @@ class Data_Interpreter(Thread):
                 #self.output.put_nowait(processed_data_rgb)
                 self.output.put_nowait(full_img)
 
+
+    def analyze_data_rgb_qr(self, data):
+        rval, info, points, qr = self.qrHelp.detectAndDecodeMulti(np.hstack([data,data]))
+        print("QR CODE:",rval,info)
+        cv.imshow("TEST",data)
+        if cv.waitKey(10)==27:
+            pass
 
     def composite_depth_and_rgb(self, depth, results):
         for item in results:
@@ -108,16 +117,18 @@ class Data_Interpreter(Thread):
         print("type of data for rgb:",type(data),"---",data.shape)
         
         #greyscale = cv.cvtColor(data, cv.COLOR_BGR2GRAY)
-        blurred_greyscale = cv.GaussianBlur(data,(5,5),0)
+        #blurred_greyscale = cv.GaussianBlur(data,(5,5),0)
         #thresh_blur_grey=cv.threshold(blurred_greyscale,(0,0,0),(100,255,100),0)[1]
-        thresh_blur_grey = cv.inRange(blurred_greyscale, (90, 0, 90), (130, 255, 130))
+        thresh_blur_grey = cv.inRange(data, (70, 0, 70), (100, 45, 100))
         contours = cv.findContours(thresh_blur_grey.copy(),cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
         contours = imu.grab_contours(contours)
         print("length of contours list:" , len(contours))
         result_list = []
         for contour in contours:
             corn_number = self.contour_processor(contour)
-            if corn_number == 3:
+            if corn_number == 0:
+                pass
+            elif corn_number == 3:
                 center_tuple = self.find_contour_center(contour)
                 if center_tuple != (0,0):
                     result_list.append([contour,center_tuple,"tri"])
@@ -129,10 +140,7 @@ class Data_Interpreter(Thread):
                 center_tuple = self.find_contour_center(contour)
                 if center_tuple != (0,0):
                     result_list.append([contour,center_tuple,"pent"])
-            else:
-                center_tuple = self.find_contour_center(contour)
-                if center_tuple != (0,0):
-                    result_list.append([contour,center_tuple,"cir"])
+
                 
 
         #cv.drawContours(thresh_blur_grey,contours,-1,120,3)
@@ -146,10 +154,13 @@ class Data_Interpreter(Thread):
         return result_list
 
     def contour_processor(self, shape):
-        shape_name = "unk"
-        perimeters = cv.arcLength(shape,True)
-        corners = cv.approxPolyDP(shape,0.04*perimeters,True)
-        return len(corners)
+        if len(shape)>1:
+            shape_name = "unk"
+            perimeters = cv.arcLength(shape,True)
+            corners = cv.approxPolyDP(shape,0.04*perimeters,True)
+            return len(corners)
+        else:
+            return 0 
 
     def find_contour_center(self, contour):
         try:
