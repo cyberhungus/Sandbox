@@ -3,8 +3,9 @@ from multiprocessing import Queue
 import frame_convert2 as fc
 import numpy as np
 from PIL import Image, ImageFilter
-import cv2
+import cv2 as cv
 import timeit
+import imutils as imu
 
 import testcy 
 #this class receives image data via a queue, iterates through the pixels, and changes their colour in accordance with height data 
@@ -12,7 +13,7 @@ class Data_Interpreter(Thread):
     def __init__(self,input_queue, output_queue,is_mock=False):
         self.input = input_queue
         self.output = output_queue
-        self.waterlevel = 150
+        self.waterlevel = 200
         self.is_mock = is_mock
                 
 
@@ -20,12 +21,27 @@ class Data_Interpreter(Thread):
         while 1:
             if not self.input.empty():
                 new_data = self.input.get_nowait()
-                processed_data = self.interpret_data(new_data)
-                processed_data = cv2.resize(processed_data,dsize=None,fx=1.5,fy=1.5)
-                self.output.put_nowait(processed_data)
+                processed_data_depth = self.interpret_data_depth(new_data[0])
+                analysis_result_list = self.analyze_data_rgb(new_data[1])
+
+                full_img = self.composite_depth_and_rgb(processed_data_depth,analysis_result_list)
+                #processed_data_depth = cv.resize(processed_data_depth,dsize=None,fx=1.5,fy=1.5)
 
 
-    def interpret_data(self, data):
+                #self.output.put_nowait(processed_data_depth)
+                #self.output.put_nowait(processed_data_rgb)
+                self.output.put_nowait(full_img)
+
+
+    def composite_depth_and_rgb(self, depth, results):
+        for item in results:
+            cv.circle(depth,item[1],10,(255,0,255))
+            cv.putText(depth,item[2],(item[1][0]-20,item[1][1]),0,0.5,(255,255,255))
+
+        return depth
+
+
+    def interpret_data_depth(self, data):
         #make the grayscale data into a rgb data array and apply filters
         print("interpreting data")
         work_data = self.do_pretty_rgb(data)
@@ -45,14 +61,6 @@ class Data_Interpreter(Thread):
         #.filter(ImageFilter.EDGE_ENHANCE)
         rgb_array = np.array(img)
         return rgb_array
-        
-
-    
-            
-            
-
-
-
 
     def c_height_calc(self,arr):
         output = np.zeros((480,640),dtype=np.uint8)
@@ -90,4 +98,66 @@ class Data_Interpreter(Thread):
         data[np.all(data > [50,50,50], axis=-1)] = (200,50,200)
 
         return data
+
+    def analyze_data_rgb(self, data):
+        work_data_rgb = fc.video_cv(data)
+        processed_data_rgb = self.find_contours(work_data_rgb)
+        return processed_data_rgb
+
+    def find_contours(self, data):
+        print("type of data for rgb:",type(data),"---",data.shape)
+        
+        #greyscale = cv.cvtColor(data, cv.COLOR_BGR2GRAY)
+        blurred_greyscale = cv.GaussianBlur(data,(5,5),0)
+        #thresh_blur_grey=cv.threshold(blurred_greyscale,(0,0,0),(100,255,100),0)[1]
+        thresh_blur_grey = cv.inRange(blurred_greyscale, (90, 0, 90), (130, 255, 130))
+        contours = cv.findContours(thresh_blur_grey.copy(),cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+        contours = imu.grab_contours(contours)
+        print("length of contours list:" , len(contours))
+        result_list = []
+        for contour in contours:
+            corn_number = self.contour_processor(contour)
+            if corn_number == 3:
+                center_tuple = self.find_contour_center(contour)
+                if center_tuple != (0,0):
+                    result_list.append([contour,center_tuple,"tri"])
+            elif corn_number == 4:
+                center_tuple = self.find_contour_center(contour)
+                if center_tuple != (0,0):
+                    result_list.append([contour,center_tuple,"sqr"])
+            elif corn_number == 5:
+                center_tuple = self.find_contour_center(contour)
+                if center_tuple != (0,0):
+                    result_list.append([contour,center_tuple,"pent"])
+            else:
+                center_tuple = self.find_contour_center(contour)
+                if center_tuple != (0,0):
+                    result_list.append([contour,center_tuple,"cir"])
+                
+
+        #cv.drawContours(thresh_blur_grey,contours,-1,120,3)
+        test_img = np.concatenate((data,np.array(Image.fromarray(thresh_blur_grey,"L").convert("RGB"))),axis=1)
+        cv.imshow("TEST",test_img)
+        if cv.waitKey(10)==27:
+            pass
+        #return thresh_blur_grey
+        #return greyscale
+        #return data
+        return result_list
+
+    def contour_processor(self, shape):
+        shape_name = "unk"
+        perimeters = cv.arcLength(shape,True)
+        corners = cv.approxPolyDP(shape,0.04*perimeters,True)
+        return len(corners)
+
+    def find_contour_center(self, contour):
+        try:
+            moment = cv.moments(contour)
+            x_center = int(moment["m10"] / moment["m00"])
+            y_center = int(moment["m01"] / moment["m00"])
+            return (x_center, y_center)
+        except:
+            return (0,0)
+        
 
