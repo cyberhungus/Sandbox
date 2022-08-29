@@ -1,0 +1,1 @@
+{"waterlevel": "150", "colorA": [0, 50, 0], "colorB": [0, 100, 100], "colorC": [0, 150, 100], "colorD": [0, 200, 100], "colorWater": [200, 50, 0], "shapeThreshLow": [70, 0, 70], "shapeThreshHigh": [100, 45, 100], "minShapeSize": "106", "refreshRate": "5"}

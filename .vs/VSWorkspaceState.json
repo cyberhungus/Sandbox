@@ -1,10 +1,11 @@
 {
   "ExpandedNodes": [
     "",
-    "\\build",
-    "\\build\\temp.win32-cpython-310\\Release",
-    "\\numpy"
+    "\\assets",
+    "\\python",
+    "\\python\\examples",
+    "\\python\\pyrealsense2"
   ],
-  "SelectedNode": "\\numpy\\oldnumeric.h",
+  "SelectedNode": "\\python\\find_librs_version.py",
   "PreviewInSolutionExplorer": false
 }
