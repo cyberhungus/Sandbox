@@ -1,32 +1,38 @@
 import json
 
 class Settings_Manager:
-    def __init__(self,main_manager, filepath="config.json", standards = True ):
+    def __init__(self,main_manager, filepath="config.json", load_standards = True ):
         self.filepath=filepath
         self.main_manager = main_manager
         self.standard_dict = {"waterlevel":150,
-                         "colorA":(0,50,0),
-                         "colorB":(0,100,100),
-                         "colorC":(0,150,100),
-                         "colorD":(0,200,100),
-                         "colorWater":(200,50,0),
+                         "colorA":(0,150,100,1),
+                         "colorB":(150,240,190,1),
+                         "colorC":(175,230,230,1),
+                         "colorD":(150,200,200,1),
+                         "colorE":(255,230,230,1),
+                         "colorF":(150,200,255,1),
+                         "colorWater":(200,50,0,1),
+                         "colorDeepWater":(250,50,0,1),
                          "shapeThreshLow":(70,0,70),
                          "shapeThreshHigh":(100,45,100),
                          "minShapeSize":50,
-                         "refreshRate":1
+                         "refreshRate":5
                          }
         self.settings_dict = {"waterlevel":150,
                          "colorA":(0,50,0),
                          "colorB":(0,100,100),
                          "colorC":(0,150,100),
                          "colorD":(0,200,100),
+                         "colorE":(255,230,230),
+                         "colorF":(150,200,255),
                          "colorWater":(200,50,0),
+                         "colorDeepWater":(250,50,0),
                          "shapeThreshLow":(70,0,70),
                          "shapeThreshHigh":(100,45,100),
                          "minShapeSize":50,
                          "refreshRate":1
                          }
-        if standards==True:
+        if load_standards==True:
            self.write_standards()
         self.read()
 
@@ -36,7 +42,7 @@ class Settings_Manager:
             self.main_manager.update_settings_hook(self.settings_dict)
             self.write()
         else:
-            self.settings_dict[parameter[3:]] = [value[0],value[1],value[2] ]
+            self.settings_dict[parameter[3:]] = [value[0],value[1],value[2]]
             self.main_manager.update_settings_hook(self.settings_dict)
             self.write()
 
@@ -51,7 +57,10 @@ class Settings_Manager:
             self.settings_dict['colorB']=settings['colorB']
             self.settings_dict['colorC']=settings['colorC']
             self.settings_dict['colorD']=settings['colorD']
+            self.settings_dict['colorE']=settings['colorE']
+            self.settings_dict['colorF']=settings['colorF']
             self.settings_dict['colorWater']=settings['colorWater']
+            self.settings_dict['colorDeepWater']=settings['colorDeepWater']
             self.settings_dict['shapeThreshLow']=settings['shapeThreshLow']
             self.settings_dict['shapeThreshHigh']=settings['shapeThreshHigh']
             self.settings_dict['minShapeSize']=settings['minShapeSize']

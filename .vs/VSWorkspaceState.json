@@ -1,11 +1,7 @@
 {
   "ExpandedNodes": [
-    "",
-    "\\assets",
-    "\\python",
-    "\\python\\examples",
-    "\\python\\pyrealsense2"
+    ""
   ],
-  "SelectedNode": "\\python\\find_librs_version.py",
+  "SelectedNode": "\\assets",
   "PreviewInSolutionExplorer": false
 }

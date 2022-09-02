@@ -1,8 +1,6 @@
-from ast import Str
-from configparser import Interpolation
+
 from threading import Thread 
 from multiprocessing import Queue
-from tokenize import String
 import frame_convert2 as fc
 import numpy as np
 from PIL import Image, ImageFilter
@@ -10,16 +8,20 @@ import cv2 as cv
 import timeit
 import imutils as imu
 import os
+from Object_Manager import Tree_Manager as tm
 
 #this class receives image data via a queue, iterates through the pixels, and changes their colour in accordance with height data 
 class Data_Interpreter(Thread):
     def __init__(self,input_queue, output_queue,is_mock=False):
         self.input = input_queue
         self.output = output_queue
-        self.waterlevel = 200
+        self.waterlevel = 4000
         self.is_mock = is_mock
 
         self.shapes =[]
+        self.tree_manager = tm(10, 480,640)
+
+
 
 
 
@@ -29,7 +31,10 @@ class Data_Interpreter(Thread):
         self.colorB = (0,100,100)
         self.colorC = (0,150,100)
         self.colorD = (0,200,100)
+        self.colorE = (120,150,100)
+        self.colorF = (200,200,100)
         self.colorWater = (200,50,0)
+        self.colorDeepWater = (250,50,0)
         self.shapeThreshLow = (70,0,70)
         self.shapeThreshHigh = (100,45,100)
         self.minShapeSize = 40
@@ -42,8 +47,11 @@ class Data_Interpreter(Thread):
         self.houseIMG = cv.imread(filepath,cv.IMREAD_COLOR)
 
 
+        filepath = os.getcwd()+"/assets/tree.png"
+        self.treeIMG = cv.imread(filepath,cv.IMREAD_UNCHANGED)
+  # 
+
     def run(self):
-#        self.qrHelp = cv.QRCodeDetector()
         while 1:
             if not self.input.empty():
                 new_data = self.input.get_nowait()
@@ -64,8 +72,19 @@ class Data_Interpreter(Thread):
                     elif new_data[0]=="colorD":
                         self.colorD = (int(new_data[1][0]),int(new_data[1][1]),int(new_data[1][2]))
 
+
+                    elif new_data[0]=="colorE":
+                        self.colorE = (int(new_data[1][0]),int(new_data[1][1]),int(new_data[1][2]))
+
+                    elif new_data[0]=="colorF":
+                        self.colorF = (int(new_data[1][0]),int(new_data[1][1]),int(new_data[1][2]))
+
                     elif new_data[0]=="colorWater":
                         self.colorWater = (int(new_data[1][0]),int(new_data[1][1]),int(new_data[1][2]))
+
+                    elif new_data[0]=="colorDeepWater":
+                        self.colorWater = (int(new_data[1][0]),int(new_data[1][1]),int(new_data[1][2]))
+
                     elif new_data[0]=="arrcolorA":
                         self.colorA = (int(new_data[1][2]),int(new_data[1][1]),int(new_data[1][0]))
 
@@ -78,9 +97,19 @@ class Data_Interpreter(Thread):
                     elif new_data[0]=="arrcolorD":
                         self.colorD = (int(new_data[1][2]),int(new_data[1][1]),int(new_data[1][0]))
 
+
+                    elif new_data[0]=="arrcolorE":
+                        self.colorE = (int(new_data[1][2]),int(new_data[1][1]),int(new_data[1][0]))
+
+                    elif new_data[0]=="arrcolorF":
+                        self.colorF = (int(new_data[1][2]),int(new_data[1][1]),int(new_data[1][0]))
+
                     elif new_data[0]=="arrcolorWater":
                         self.colorWater = (int(new_data[1][2]),int(new_data[1][1]),int(new_data[1][0]))
-                        
+                    
+                    elif new_data[0]=="arrcolorDeepWater":
+                        self.colorDeepWater = (int(new_data[1][2]),int(new_data[1][1]),int(new_data[1][0]))
+                                               
                     elif new_data[0]=="shapeThreshLow":
                         self.shapeThreshLow = (int(new_data[1][0]),int(new_data[1][1]),int(new_data[1][2]))
 
@@ -89,6 +118,9 @@ class Data_Interpreter(Thread):
                     
                     elif new_data[0]=="minShapeSize":
                         self.minShapeSize = int(new_data[1])  
+
+                    elif new_data[0]=="newTrees":
+                        self.tree_manager.generate_new_tree_pos(int(new_data[1]))  
 
                     elif new_data[0]=="color_correct":
                         print("performing color correct")
@@ -99,23 +131,11 @@ class Data_Interpreter(Thread):
                     starttime = timeit.default_timer()
                     processed_data_depth = self.interpret_data_depth(new_data[0])
                     analysis_result_list = self.analyze_data_rgb(new_data[1])
-                    #analysis_result_list = self.analyze_data_rgb_qr(new_data[1])
                     self.shape_comparator(analysis_result_list)
                     full_img = self.composite_depth_and_rgb(processed_data_depth,analysis_result_list)
-                    #processed_data_depth = cv.resize(processed_data_depth,dsize=None,fx=1.5,fy=1.5)
-                    #self.output.put_nowait(processed_data_depth)
-                    #self.output.put_nowait(processed_data_rgb)
+                    full_img = self.tree_placer(full_img, self.tree_manager.get_Tree_Positions())
                     self.output.put_nowait(full_img)
-                  #  self.output.put_nowait(processed_data_depth)
                     print("Time for color convert algorithm :", timeit.default_timer() - starttime)
-
-
-    def analyze_data_rgb_qr(self, data):
-        rval, info, points, qr = self.qrHelp.detectAndDecodeMulti(np.hstack([data,data]))
-        print("QR CODE:",rval,info)
-        cv.imshow("TEST",data)
-        if cv.waitKey(10)==27:
-            pass
 
     #sets threshold values for better image and shape recognition based on a color value 
     def perform_color_correct(self, input_color):
@@ -131,8 +151,8 @@ class Data_Interpreter(Thread):
     #combines regular depth camera data and AR data 
     def composite_depth_and_rgb(self, depth, results):
         for item in results:
-            cv.circle(depth,item[1],10,(255,0,255))
-            cv.putText(depth,item[2],(item[1][0]-20,item[1][1]),0,0.5,(255,255,255))
+            #cv.circle(depth,item[1],10,(255,0,255))
+           # cv.putText(depth,item[2],(item[1][0]-20,item[1][1]),0,0.5,(255,255,255))
             x_offset = 10 
             y_offset = 10 
             x_min,y_min = item[1][0]-x_offset,item[1][1]-y_offset
@@ -167,8 +187,10 @@ class Data_Interpreter(Thread):
 
     def c_height_calc(self,arr):       
         output = np.zeros((arr.shape[0],arr.shape[1]),dtype=np.uint8)
-        mult = self.waterlevel/4
+        mult = self.waterlevel/6
         mult= int(mult)
+        deepwater = arr[:,:]>self.waterlevel+mult
+        arr[deepwater] = -1 
         water = arr[:,:]>self.waterlevel
         arr[water] = -1 
         landA = arr[:,:]>self.waterlevel-mult
@@ -179,15 +201,26 @@ class Data_Interpreter(Thread):
         arr[landC] = -1
         landD = arr[:,:]>self.waterlevel-(mult*4)
         arr[landD] = -1
-        output[landD] = 250
+        landE = arr[:,:]>self.waterlevel-(mult*5)
+        arr[landE] = -1
+        landF = arr[:,:]>self.waterlevel-(mult*6)
+        arr[landF] = -1
+        output[landF] = 250
+        output[landE] = 240
+        output[landD] = 220
         output[landC] = 200
         output[landB] = 150
         output[landA] = 100
         output[water] = 50
+        output[deepwater] = 20
         img = Image.fromarray(output,"L").convert("RGB")
         data = np.array(img)
+                #landF
+        data[np.all(data == [250,250,250], axis=-1)] = self.colorF
+                #landE
+        data[np.all(data == [240,240,240], axis=-1)] = self.colorE
         #landD
-        data[np.all(data == [250,250,250], axis=-1)] = self.colorD
+        data[np.all(data == [220,220,220], axis=-1)] = self.colorD
         #landC
         data[np.all(data == [200,200,200], axis=-1)] = self.colorC
         #landB
@@ -196,10 +229,10 @@ class Data_Interpreter(Thread):
         data[np.all(data == [100,100,100], axis=-1)] = self.colorA
         #water
         data[np.all(data == [50,50,50], axis=-1)] = self.colorWater
-        #debug
-        #data[np.all(data > [50,50,50], axis=-1)] = (200,50,200)
-
+                #deepwater
+        data[np.all(data == [20,20,20], axis=-1)] = self.colorDeepWater
         return data
+
 
     def analyze_data_rgb(self, data):
         work_data_rgb = fc.video_cv(data)
@@ -207,15 +240,9 @@ class Data_Interpreter(Thread):
         return processed_data_rgb
 
     def find_contours(self, data):
-        #print("type of data for rgb:",type(data),"---",data.shape)
-        
-        #greyscale = cv.cvtColor(data, cv.COLOR_BGR2GRAY)
-        #blurred_greyscale = cv.GaussianBlur(data,(5,5),0)
-        #thresh_blur_grey=cv.threshold(blurred_greyscale,(0,0,0),(100,255,100),0)[1]
         thresh_blur_grey = cv.inRange(data, self.shapeThreshLow ,self.shapeThreshHigh)
         contours = cv.findContours(thresh_blur_grey.copy(),cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
         contours = imu.grab_contours(contours)
-        #print("length of contours list:" , len(contours))
         result_list = []
         for contour in contours:
             corn_number = self.contour_processor(contour)
@@ -269,7 +296,7 @@ class Data_Interpreter(Thread):
             return (0,0)
         
 
-
+    #todo 
     def shape_comparator(self, new_shapes):
         if len(self.shapes)==0:
             self.shapes=new_shapes
@@ -279,3 +306,43 @@ class Data_Interpreter(Thread):
                     if (new_shape[1][0] <= old_shape[1][0]+self.shape_offset or new_shape[1][0] >= old_shape[1][0]-self.shape_offset) and (new_shape[1][1] <= old_shape[1][1]+self.shape_offset or new_shape[1][1] >= old_shape[1][1]-self.shape_offset):
                         print("same shape detected")
 
+    def tree_placer(self,img, pos_list):
+        rimg = Image.fromarray(img,"RGB").convert("RGBA")
+        return_img = np.array(rimg)
+
+        for item in pos_list:
+            color_at_pos = (return_img[item[0]][item[1]][0],return_img[item[0]][item[1]][1],return_img[item[0]][item[1]][2],return_img[item[0]][item[1]][3])
+            if color_at_pos == self.rgba_help(self.colorA,255):
+                self.plant_tree(5,item,return_img)
+            elif color_at_pos == self.rgba_help(self.colorB,255):
+                self.plant_tree(10,item,return_img)
+            elif color_at_pos == self.rgba_help(self.colorC,255):
+                self.plant_tree(15,item,return_img)
+            elif color_at_pos == self.rgba_help(self.colorD,255):
+                self.plant_tree(20,item,return_img)
+
+
+            cv.circle(return_img,item,5,(0,220,0))
+            #cv.putText(img,str(color_at_pos),item,0,0.5,(255,255,255))
+        return return_img
+
+
+    def plant_tree(self,size,pos,img):
+        x_offset = size
+        y_offset = size
+        x_min,y_min = pos[0]-x_offset,pos[1]-y_offset
+        x_max,y_max = pos[0]+x_offset,pos[1]+y_offset
+        tree = self.treeIMG.copy()
+        resized = cv.resize(tree, (2*x_offset,2*y_offset), interpolation = cv.INTER_AREA)
+        try:
+            #superimposes image with transparency
+            alpha_s = resized[:, :, 3] / 255.0
+            alpha_l = 1.0 - alpha_s
+            for c in range(3):
+                img[y_min:y_max,x_min:x_max,c] = (alpha_s * resized[:, :, c] + alpha_l * img[y_min:y_max,x_min:x_max, c])
+        except Exception as ex :
+            pass
+
+
+    def rgba_help(self, color, a_val):
+        return (color[0],color[1],color[2],a_val)

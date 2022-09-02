@@ -10,6 +10,8 @@ import time as t
 import numpy as np
 import frame_convert2 as fc
 
+#import pyrealsense2
+
 #freq = how many refreshes per second
 #output_queue = queue to pass data to data visualizer 
 #is_mock: if true uses normal camera, if false uses kinect
@@ -28,9 +30,6 @@ class Data_Getter:
         self.runner = Thread(target=self.get_Data)
         self.runner.start()
         
-        
-        
-    
     #get data gets the depth and RGB data from kinect (or two regular images from a webcam) and puts them into a queue so the data_interpreter can receive them
     def get_Data(self):
             if self.is_mock == False:
@@ -52,7 +51,7 @@ class Data_Getter:
                             print("exception in data getter",ex)
             #test function to get normal webcam img 
             else:
-                vid = cv.VideoCapture(0,cv.CAP_DSHOW)
+                vid = cv.VideoCapture(0)
                 vid.set(cv.CAP_PROP_FRAME_WIDTH,self.resolution[0])
                 vid.set(cv.CAP_PROP_FRAME_HEIGHT,self.resolution[1])
                 while 1:
@@ -68,8 +67,6 @@ class Data_Getter:
                                 print("color correct reference:", capture_color_reference)
                                 self.output.put_nowait(("color_correct",capture_color_reference))
                             self.output.put_nowait((output_data_grey,captured_data))
-
-
           
     #helper function for time in milliseconds       
     def current_milli_time(self):
@@ -78,6 +75,7 @@ class Data_Getter:
     #alters refresh rate 
     def update_refresh_rate(self, new_rate):
         self.ms_delay = 1000/int(new_rate)
+
     #turns color correct on and off 
     def toggle_color_correct(self, new_status):
         self.color_correct = new_status
