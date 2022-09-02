@@ -11,9 +11,10 @@ from threading import Thread
 class Main_Manager:
     def __init__(self):
         self.Raw_Queue = mp.Queue()
-        self.Data_Getter = dg.Data_Getter(1,self.Raw_Queue)
         self.Interpreted_Queue = mp.Queue()
-        self.Data_Interpreter = di.Data_Interpreter(self.Raw_Queue, self.Interpreted_Queue)
+        self.Data_Getter = dg.Data_Getter(1,self.Raw_Queue,self.Interpreted_Queue)
+
+        self.Data_Interpreter = di.Data_Interpreter(self.Raw_Queue, self.Interpreted_Queue, is_mock=True)
         self.Interpret_Process = mp.Process(target=self.Data_Interpreter.run)
         self.Interpret_Process.start()
         self.Data_Visualizer = dv.Data_Visualizer(self.Interpreted_Queue)

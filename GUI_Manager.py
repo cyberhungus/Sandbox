@@ -13,7 +13,7 @@ class GUI_Manager:
 
 
         self.label.grid(column=1,row=0)
-        self.waterslider = tk.Scale(self.window, from_=0, to=10000, command= self.waterSliderMove)
+        self.waterslider = tk.Scale(self.window, from_=0, to=255, command= self.waterSliderMove)
         self.waterslider.set(self.setting_manager.get_settings()['waterlevel'])
         self.waterslider.grid(column=0,row=1)
         self.labelWater = tk.Label(self.window, text="Waterlevel")

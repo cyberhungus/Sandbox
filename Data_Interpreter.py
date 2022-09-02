@@ -12,14 +12,17 @@ from Object_Manager import Tree_Manager as tm
 
 #this class receives image data via a queue, iterates through the pixels, and changes their colour in accordance with height data 
 class Data_Interpreter(Thread):
-    def __init__(self,input_queue, output_queue,is_mock=False):
+    def __init__(self,input_queue, output_queue,is_mock=False, has_trees = False):
         self.input = input_queue
         self.output = output_queue
         self.waterlevel = 4000
         self.is_mock = is_mock
 
         self.shapes =[]
-        self.tree_manager = tm(10, 480,640)
+
+        self.tree_state = has_trees
+        if self.tree_state == True:
+            self.tree_manager = tm(10, 480,640)
 
 
 
@@ -120,7 +123,8 @@ class Data_Interpreter(Thread):
                         self.minShapeSize = int(new_data[1])  
 
                     elif new_data[0]=="newTrees":
-                        self.tree_manager.generate_new_tree_pos(int(new_data[1]))  
+                        if self.tree_state==True:
+                            self.tree_manager.generate_new_tree_pos(int(new_data[1]))  
 
                     elif new_data[0]=="color_correct":
                         print("performing color correct")
@@ -128,14 +132,18 @@ class Data_Interpreter(Thread):
                     
                 #this section checks for new image data and then runs the neccessary functions on that data 
                 else:
-                    starttime = timeit.default_timer()
-                    processed_data_depth = self.interpret_data_depth(new_data[0])
+                    #starttime = timeit.default_timer()
+                    #processed_data_depth = self.c_height_calc(new_data[0])
+                    processed_data_depth = self.height_transform_lut(new_data[0])
                     analysis_result_list = self.analyze_data_rgb(new_data[1])
                     self.shape_comparator(analysis_result_list)
                     full_img = self.composite_depth_and_rgb(processed_data_depth,analysis_result_list)
-                    full_img = self.tree_placer(full_img, self.tree_manager.get_Tree_Positions())
-                    self.output.put_nowait(full_img)
-                    print("Time for color convert algorithm :", timeit.default_timer() - starttime)
+                    if self.tree_state == True:
+                        full_img = self.tree_placer(full_img, self.tree_manager.get_Tree_Positions())
+
+
+                    self.output.put_nowait(("ANALYZED",full_img))
+                   # print("Time for color convert algorithm :", timeit.default_timer() - starttime)
 
     #sets threshold values for better image and shape recognition based on a color value 
     def perform_color_correct(self, input_color):
@@ -166,12 +174,7 @@ class Data_Interpreter(Thread):
         return depth
 
 
-    def interpret_data_depth(self, data):
-        #make the grayscale data into a rgb data array and apply filters
-        #print("interpreting data")
-        work_data = self.do_pretty_rgb(data)
-        col_data = self.c_height_calc(work_data)
-        return col_data
+
     
     #this function does some neccessary conversions, putting the 
     def do_pretty_rgb(self, data):
@@ -185,10 +188,57 @@ class Data_Interpreter(Thread):
         rgb_array = np.array(img)
         return rgb_array
 
-    def c_height_calc(self,arr):       
+    def height_transform_lut(self, data):
+        data = cv.convertScaleAbs(data)
+        print(data)
+        data = Image.fromarray(data,"L").convert("RGB")
+        data = np.array(data)
+        lookup_table = np.zeros((256,1,3),dtype=np.uint8)
+
+        red=[]
+        #generate red
+        for num in range(256):
+            if num<self.waterlevel-50:
+                red.append(self.waterlevel-num)
+            else:
+                red.append(0)
+            
+        blue=[]
+        #generate blue
+        for num in range(256):
+            if num>self.waterlevel:
+                blue.append(255)
+            else:
+                blue.append(0)
+
+        green=[]
+        #generate blue
+        for num in range(256):
+            if num<self.waterlevel:
+                green.append(num)
+            else:
+                green.append(0)
+
+        #red
+        lookup_table[:,0,0]= red
+
+        #green
+        lookup_table[:,0,1]=blue
+
+        #blue
+        lookup_table[:,0,2]=green
+
+        print(lookup_table.shape)
+
+        return cv.LUT(data,lookup_table)
+
+    def c_height_calc(self,arr): 
+
+        starttime = timeit.default_timer()
         output = np.zeros((arr.shape[0],arr.shape[1]),dtype=np.uint8)
         mult = self.waterlevel/6
-        mult= int(mult)
+       # mult= int(mult)
+        mult=1000
         deepwater = arr[:,:]>self.waterlevel+mult
         arr[deepwater] = -1 
         water = arr[:,:]>self.waterlevel
@@ -229,14 +279,18 @@ class Data_Interpreter(Thread):
         data[np.all(data == [100,100,100], axis=-1)] = self.colorA
         #water
         data[np.all(data == [50,50,50], axis=-1)] = self.colorWater
-                #deepwater
+        #deepwater
         data[np.all(data == [20,20,20], axis=-1)] = self.colorDeepWater
+        print("Time for c_height_calc :", timeit.default_timer() - starttime)
         return data
 
 
     def analyze_data_rgb(self, data):
-        work_data_rgb = fc.video_cv(data)
-        processed_data_rgb = self.find_contours(work_data_rgb)
+        starttime = timeit.default_timer()
+
+        #work_data_rgb = fc.video_cv(data)
+        processed_data_rgb = self.find_contours(data)
+        print("Time for analyse rgb :", timeit.default_timer() - starttime)
         return processed_data_rgb
 
     def find_contours(self, data):
@@ -269,10 +323,10 @@ class Data_Interpreter(Thread):
                 if center_tuple != (0,0):
                     result_list.append([contour,center_tuple,"oct"])
 
-        test_img = np.concatenate((data,np.array(Image.fromarray(thresh_blur_grey,"L").convert("RGB"))),axis=1)
-        cv.imshow("TEST",test_img)
-        if cv.waitKey(10)==27:
-            pass
+        #test_img = np.concatenate((data,np.array(Image.fromarray(thresh_blur_grey,"L").convert("RGB"))),axis=1)
+        #cv.imshow("TEST",test_img)
+        #if cv.waitKey(10)==27:
+        #    pass
 
         return result_list
 
