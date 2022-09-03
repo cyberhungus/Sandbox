@@ -27,7 +27,8 @@ class Data_Getter:
         self.is_mock = is_mock
         self.resolution = resolution 
         self.color_correct = color_correct
-        print(cv.COLORMAP_AUTUMN)
+        self.image_buffer = []
+
 
         if self.is_mock==False:
                 self.pipeline = rs.pipeline()
@@ -40,7 +41,14 @@ class Data_Getter:
                 print("streams")
                 # Start streaming
         #        print("Can resolve:", rs.config.can_resolve(config))
-                self.pipeline.start(config)
+                self.device_manager =self.pipeline.start(config)
+
+                self.hole_filler = rs.hole_filling_filter(0)
+                self.temporal_filter = rs.temporal_filter()
+
+
+
+
         self.runner = Thread(target=self.get_Data)
         self.runner.start()      
 
@@ -56,11 +64,28 @@ class Data_Getter:
                         try:
                             self.next_capture_time = self.current_milli_time()+self.ms_delay
                             frames = self.pipeline.wait_for_frames()
-                           # print(frames)
-                            depth_frame = frames.get_depth_frame()
-                        #    print("Depth",depth_frame)
-                            color_frame = frames.get_color_frame()
-                            #print("color",color_frame)
+                            self.align = rs.align(rs.stream.depth)
+                           
+                            aligned_frames = self.align.process(frames)
+                            color_frame = aligned_frames.first(rs.stream.color)
+                            depth_frame = aligned_frames.get_depth_frame()
+                            
+                            #depth_frame = frames.get_depth_frame()
+
+                            self.image_buffer.append(depth_frame)
+
+                            if len(self.image_buffer)>5:
+                                self.image_buffer.pop(0)
+
+                            for image in self.image_buffer:
+                                 depth_frame_temp_filter = self.temporal_filter.process(image)
+
+
+
+
+                            #color_frame = frames.get_color_frame()
+
+                            depth_frame = self.hole_filler.process(depth_frame_temp_filter)
                             depth_data = np.asanyarray(depth_frame.get_data())
                            
                             color_data = np.asanyarray(color_frame.get_data())

@@ -1,7 +1,7 @@
 import json
 
 class Settings_Manager:
-    def __init__(self,main_manager, filepath="config.json", load_standards = True ):
+    def __init__(self,main_manager, filepath="config.json", load_standards = False ):
         self.filepath=filepath
         self.main_manager = main_manager
         self.standard_dict = {"waterlevel":150,

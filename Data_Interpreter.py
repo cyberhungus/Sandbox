@@ -1,6 +1,7 @@
 
 from threading import Thread 
 from multiprocessing import Queue
+from turtle import color
 import frame_convert2 as fc
 import numpy as np
 from PIL import Image, ImageFilter
@@ -30,12 +31,14 @@ class Data_Interpreter(Thread):
 
               
         #Region storing variables 
+        self.lineBrown = (10,55,100)
         self.colorA = (0,50,0)
         self.colorB = (0,100,100)
         self.colorC = (0,150,100)
         self.colorD = (0,200,100)
         self.colorE = (120,150,100)
         self.colorF = (200,200,100)
+        self.colorF = (250,200,200)
         self.colorWater = (200,50,0)
         self.colorDeepWater = (250,50,0)
         self.shapeThreshLow = (70,0,70)
@@ -136,8 +139,9 @@ class Data_Interpreter(Thread):
                     #processed_data_depth = self.c_height_calc(new_data[0])
                     processed_data_depth = self.height_transform_lut(new_data[0])
                     analysis_result_list = self.analyze_data_rgb(new_data[1])
+                    line_data_depth = self.draw_height_lines(processed_data_depth)
                     self.shape_comparator(analysis_result_list)
-                    full_img = self.composite_depth_and_rgb(processed_data_depth,analysis_result_list)
+                    full_img = self.composite_depth_and_rgb(line_data_depth,analysis_result_list)
                     if self.tree_state == True:
                         full_img = self.tree_placer(full_img, self.tree_manager.get_Tree_Positions())
 
@@ -188,54 +192,66 @@ class Data_Interpreter(Thread):
         rgb_array = np.array(img)
         return rgb_array
 
+    def generate_LUT(self):
+        lookup_table = np.zeros((256,1,3),dtype=np.uint8)
+        
+        color_table=[]
+        remainder = (255-self.waterlevel)/6
+        for num in range(256):
+            if num in range(0,int(self.waterlevel/2)):
+                color_table.append(self.colorDeepWater)
+            elif num in range(int(self.waterlevel/2),self.waterlevel):
+                color_table.append(self.colorWater)            
+            elif num in range(int(self.waterlevel),int(self.waterlevel+remainder)):
+                color_table.append(self.colorA)   
+            elif num in range(int(self.waterlevel+remainder),int(self.waterlevel+remainder*2)):
+                color_table.append(self.colorB)   
+            elif num in range(int(self.waterlevel+remainder*2),int(self.waterlevel+remainder*3)):
+                color_table.append(self.colorC)   
+            elif num in range(int(self.waterlevel+remainder*3),int(self.waterlevel+remainder*4)):
+                color_table.append(self.colorD)   
+            elif num in range(int(self.waterlevel+remainder*4),int(self.waterlevel+remainder*5)):
+                color_table.append(self.colorE)   
+            elif num in range(int(self.waterlevel+remainder*5),int(self.waterlevel+remainder*6)):
+                color_table.append(self.colorF)  
+                
+            elif num in range(int(self.waterlevel+remainder*6),int(255)):
+                color_table.append(self.colorG)   
+            else:
+                color_table.append([255,255,255])
+
+        for iterator in range(256):
+            #red
+            lookup_table[iterator,0,0]= color_table[iterator][0]
+            #green
+            lookup_table[iterator,0,1]=color_table[iterator][1]
+            #blue
+            lookup_table[iterator,0,2]=color_table[iterator][2]
+
+
+        return lookup_table
+
     def height_transform_lut(self, data):
-        data = cv.convertScaleAbs(data)
-        print(data)
+        
+        data = cv.convertScaleAbs(data,alpha=0.06)
         data = Image.fromarray(data,"L").convert("RGB")
         data = np.array(data)
-        lookup_table = np.zeros((256,1,3),dtype=np.uint8)
+        return cv.LUT(data,self.generate_LUT())
 
-        red=[]
-        #generate red
-        for num in range(256):
-            if num<self.waterlevel-50:
-                red.append(self.waterlevel-num)
-            else:
-                red.append(0)
-            
-        blue=[]
-        #generate blue
-        for num in range(256):
-            if num>self.waterlevel:
-                blue.append(255)
-            else:
-                blue.append(0)
 
-        green=[]
-        #generate blue
-        for num in range(256):
-            if num<self.waterlevel:
-                green.append(num)
-            else:
-                green.append(0)
 
-        #red
-        lookup_table[:,0,0]= red
-
-        #green
-        lookup_table[:,0,1]=blue
-
-        #blue
-        lookup_table[:,0,2]=green
-
-        print(lookup_table.shape)
-
-        return cv.LUT(data,lookup_table)
-
+    def draw_height_lines(self,data):
+        data_grey = Image.fromarray(data,"RGB").convert("L")
+        data_grey = np.array(data_grey)
+        canny = cv.Canny(data_grey, 0,255)
+        line_pixels = canny[:,:]>0
+        data[line_pixels]=self.lineBrown
+        return data
     def c_height_calc(self,arr): 
 
         starttime = timeit.default_timer()
         output = np.zeros((arr.shape[0],arr.shape[1]),dtype=np.uint8)
+
         mult = self.waterlevel/6
        # mult= int(mult)
         mult=1000

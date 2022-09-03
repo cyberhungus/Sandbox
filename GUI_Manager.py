@@ -37,6 +37,8 @@ class GUI_Manager:
         self.treeSlide.grid(column=3,row=1)
         self.labelTree = tk.Label(self.window, text="Trees")
         self.labelTree.grid(column=3,row=2)
+        self.label_remainder = tk.Label(self.window)
+        self.label_remainder.grid(column=0,row=11)
 
         self.color_corr_state = False
         self.autoColorButton = tk.Button(self.window, text="Color Correct: False"+str(self.color_corr_state),command=self.col_corr)
@@ -82,12 +84,13 @@ class GUI_Manager:
         self.window.attributes('-topmost', 'true')
         self.window.mainloop()
 
-
+ 
 
 
     def waterSliderMove(self,arg):
         self.setting_manager.alter_setting("waterlevel",arg)
-
+        val = (255-int(arg))/6
+        self.label_remainder.config(text=str(val))
 
     def shapeSliderMove(self,arg):
         self.setting_manager.alter_setting("minShapeSize",arg)
