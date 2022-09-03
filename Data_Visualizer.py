@@ -14,7 +14,7 @@ class Data_Visualizer:
         while 1:
             if not self.input.empty():
                 current_data = self.input.get_nowait()
-
+                #the data_visualizer may receive different images apart frotm the "normal" depth/color tuple. a String at [0] position denotes this 
                 if current_data[0]=="ANALYZED":
                     self.current_image_full = current_data[1]
 
@@ -23,10 +23,6 @@ class Data_Visualizer:
 
                 elif current_data[0]=="DEPTH_TEST":
                     self.depth_control = current_data[1]
-
-
-
-                #print("DATA VIS RECEIVED:",self.current_image)
                 try:
                     cv2.namedWindow("OUTPUT", cv2.WND_PROP_FULLSCREEN)
                     cv2.setWindowProperty("OUTPUT",cv2.WND_PROP_FULLSCREEN,cv2.WINDOW_FULLSCREEN)

@@ -13,6 +13,7 @@ class Main_Manager:
         self.Raw_Queue = mp.Queue()
         self.Interpreted_Queue = mp.Queue()
         self.Data_Getter = dg.Data_Getter(1,self.Raw_Queue,self.Interpreted_Queue)
+        self.Settings_Manager = sm.Settings_Manager(self)
 
         self.Data_Interpreter = di.Data_Interpreter(self.Raw_Queue, self.Interpreted_Queue, is_mock=True)
         self.Interpret_Process = mp.Process(target=self.Data_Interpreter.run)
@@ -20,7 +21,7 @@ class Main_Manager:
         self.Data_Visualizer = dv.Data_Visualizer(self.Interpreted_Queue)
         self.Visualize_Process = mp.Process(target=self.Data_Visualizer.visualizer_runner)
         self.Visualize_Process.start()
-        self.Settings_Manager = sm.Settings_Manager(self)
+
         self.gui = gm.GUI_Manager(self.Settings_Manager)
 
         

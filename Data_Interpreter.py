@@ -1,4 +1,5 @@
 
+from cgitb import lookup
 from threading import Thread 
 from multiprocessing import Queue
 from turtle import color
@@ -27,8 +28,6 @@ class Data_Interpreter(Thread):
 
 
 
-
-
               
         #Region storing variables 
         self.lineBrown = (10,55,100)
@@ -39,6 +38,7 @@ class Data_Interpreter(Thread):
         self.colorE = (120,150,100)
         self.colorF = (200,200,100)
         self.colorF = (250,200,200)
+        self.colorG = (250,250,0)
         self.colorWater = (200,50,0)
         self.colorDeepWater = (250,50,0)
         self.shapeThreshLow = (70,0,70)
@@ -56,6 +56,8 @@ class Data_Interpreter(Thread):
         filepath = os.getcwd()+"/assets/tree.png"
         self.treeIMG = cv.imread(filepath,cv.IMREAD_UNCHANGED)
   # 
+        self.lookup_table = self.generate_LUT()
+
 
     def run(self):
         while 1:
@@ -65,57 +67,69 @@ class Data_Interpreter(Thread):
                 if type(new_data[0]) == str:
                     if new_data[0]=="waterlevel":
                         self.waterlevel = int(new_data[1])
+                        
+                        self.lookup_table = self.generate_LUT()
 
                     elif new_data[0]=="colorA":
                         self.colorA = (int(new_data[1][0]),int(new_data[1][1]),int(new_data[1][2]))
-
+                        
+                        self.lookup_table = self.generate_LUT()
                     elif new_data[0]=="colorB":
                         self.colorB = (int(new_data[1][0]),int(new_data[1][1]),int(new_data[1][2]))
 
+                        self.lookup_table = self.generate_LUT()
                     elif new_data[0]=="colorC":
                         self.colorC = (int(new_data[1][0]),int(new_data[1][1]),int(new_data[1][2]))
 
+                        self.lookup_table = self.generate_LUT()
                     elif new_data[0]=="colorD":
                         self.colorD = (int(new_data[1][0]),int(new_data[1][1]),int(new_data[1][2]))
-
+                        
+                        self.lookup_table = self.generate_LUT()
 
                     elif new_data[0]=="colorE":
                         self.colorE = (int(new_data[1][0]),int(new_data[1][1]),int(new_data[1][2]))
-
+                        
+                        self.lookup_table = self.generate_LUT()
                     elif new_data[0]=="colorF":
                         self.colorF = (int(new_data[1][0]),int(new_data[1][1]),int(new_data[1][2]))
-
+                        
+                        self.lookup_table = self.generate_LUT()
                     elif new_data[0]=="colorWater":
                         self.colorWater = (int(new_data[1][0]),int(new_data[1][1]),int(new_data[1][2]))
 
+                        self.lookup_table = self.generate_LUT()
                     elif new_data[0]=="colorDeepWater":
                         self.colorWater = (int(new_data[1][0]),int(new_data[1][1]),int(new_data[1][2]))
-
+                        
+                        self.lookup_table = self.generate_LUT()
                     elif new_data[0]=="arrcolorA":
                         self.colorA = (int(new_data[1][2]),int(new_data[1][1]),int(new_data[1][0]))
+                        self.lookup_table = self.generate_LUT()
+        
 
                     elif new_data[0]=="arrcolorB":
                         self.colorB = (int(new_data[1][2]),int(new_data[1][1]),int(new_data[1][0]))
-
+                        self.lookup_table = self.generate_LUT()
                     elif new_data[0]=="arrcolorC":
                         self.colorC = (int(new_data[1][2]),int(new_data[1][1]),int(new_data[1][0]))
-
+                        self.lookup_table = self.generate_LUT()
                     elif new_data[0]=="arrcolorD":
                         self.colorD = (int(new_data[1][2]),int(new_data[1][1]),int(new_data[1][0]))
-
+                        self.lookup_table = self.generate_LUT()
 
                     elif new_data[0]=="arrcolorE":
                         self.colorE = (int(new_data[1][2]),int(new_data[1][1]),int(new_data[1][0]))
-
+                        self.lookup_table = self.generate_LUT()
                     elif new_data[0]=="arrcolorF":
                         self.colorF = (int(new_data[1][2]),int(new_data[1][1]),int(new_data[1][0]))
-
+                        self.lookup_table = self.generate_LUT()
                     elif new_data[0]=="arrcolorWater":
                         self.colorWater = (int(new_data[1][2]),int(new_data[1][1]),int(new_data[1][0]))
-                    
+                        self.lookup_table = self.generate_LUT()
                     elif new_data[0]=="arrcolorDeepWater":
                         self.colorDeepWater = (int(new_data[1][2]),int(new_data[1][1]),int(new_data[1][0]))
-                                               
+                        self.lookup_table = self.generate_LUT()                      
                     elif new_data[0]=="shapeThreshLow":
                         self.shapeThreshLow = (int(new_data[1][0]),int(new_data[1][1]),int(new_data[1][2]))
 
@@ -131,7 +145,7 @@ class Data_Interpreter(Thread):
 
                     elif new_data[0]=="color_correct":
                         print("performing color correct")
-                        self.perform_color_correct((int(new_data[1][0]),int(new_data[1][1]),int(new_data[1][2])))
+                        self.calculate_color_correct((int(new_data[1][0]),int(new_data[1][1]),int(new_data[1][2])))
                     
                 #this section checks for new image data and then runs the neccessary functions on that data 
                 else:
@@ -149,8 +163,10 @@ class Data_Interpreter(Thread):
                     self.output.put_nowait(("ANALYZED",full_img))
                    # print("Time for color convert algorithm :", timeit.default_timer() - starttime)
 
+
+
     #sets threshold values for better image and shape recognition based on a color value 
-    def perform_color_correct(self, input_color):
+    def calculate_color_correct(self, input_color):
         if input_color[0] >=250 or input_color[0] >=250 or input_color[0] >=250:
             print("illegal color")
         else:
@@ -203,40 +219,53 @@ class Data_Interpreter(Thread):
             elif num in range(int(self.waterlevel/2),self.waterlevel):
                 color_table.append(self.colorWater)            
             elif num in range(int(self.waterlevel),int(self.waterlevel+remainder)):
-                color_table.append(self.colorA)   
+                color_table.append(self.make_gradient_color(num, int(self.waterlevel),int(self.waterlevel+remainder),self.colorA,self.colorB))  
+                #color_table.append(self.colorA)
             elif num in range(int(self.waterlevel+remainder),int(self.waterlevel+remainder*2)):
-                color_table.append(self.colorB)   
+                color_table.append(self.make_gradient_color(num, int(self.waterlevel+remainder),int(self.waterlevel+remainder*2),self.colorB,self.colorC))    
             elif num in range(int(self.waterlevel+remainder*2),int(self.waterlevel+remainder*3)):
-                color_table.append(self.colorC)   
+                color_table.append(self.make_gradient_color(num, int(self.waterlevel+remainder*2),int(self.waterlevel+remainder*3),self.colorC,self.colorD))   
             elif num in range(int(self.waterlevel+remainder*3),int(self.waterlevel+remainder*4)):
-                color_table.append(self.colorD)   
+                color_table.append(self.make_gradient_color(num, int(self.waterlevel+remainder*3),int(self.waterlevel+remainder*4),self.colorD,self.colorE))
             elif num in range(int(self.waterlevel+remainder*4),int(self.waterlevel+remainder*5)):
-                color_table.append(self.colorE)   
+                 color_table.append(self.make_gradient_color(num, int(self.waterlevel+remainder*4),int(self.waterlevel+remainder*5),self.colorE,self.colorF)) 
             elif num in range(int(self.waterlevel+remainder*5),int(self.waterlevel+remainder*6)):
-                color_table.append(self.colorF)  
+                color_table.append(self.make_gradient_color(num, int(self.waterlevel+remainder*5),int(self.waterlevel+remainder*6),self.colorF, self.colorG))
                 
             elif num in range(int(self.waterlevel+remainder*6),int(255)):
                 color_table.append(self.colorG)   
             else:
                 color_table.append([255,255,255])
 
-        for iterator in range(256):
+            print(num, ":::",lookup_table[num],":::",color_table[num])
             #red
-            lookup_table[iterator,0,0]= color_table[iterator][0]
+            lookup_table[num,0,0]= color_table[num][0]
             #green
-            lookup_table[iterator,0,1]=color_table[iterator][1]
+            lookup_table[num,0,1]=color_table[num][1]
             #blue
-            lookup_table[iterator,0,2]=color_table[iterator][2]
+            lookup_table[num,0,2]=color_table[num][2]
 
 
         return lookup_table
+
+    def make_gradient_color(self,value,rangeMin,rangeMax, colorMin, colorMax):
+        scale = rangeMax-rangeMin
+        distance = value-rangeMin
+        percentage = 100 * float(distance)/float(scale)
+        percentage = percentage/100
+        print(percentage)
+        newRed = colorMin[2] + percentage * (colorMax[2]- colorMin[2]);
+        newGreen = colorMin[1] + percentage * (colorMax[1]- colorMin[1]);
+        newBlue = colorMin[0] + percentage * (colorMax[0]- colorMin[0]);
+
+        return (newRed,newGreen,newBlue)
 
     def height_transform_lut(self, data):
         
         data = cv.convertScaleAbs(data,alpha=0.06)
         data = Image.fromarray(data,"L").convert("RGB")
         data = np.array(data)
-        return cv.LUT(data,self.generate_LUT())
+        return cv.LUT(data,self.lookup_table)
 
 
 
@@ -247,59 +276,6 @@ class Data_Interpreter(Thread):
         line_pixels = canny[:,:]>0
         data[line_pixels]=self.lineBrown
         return data
-    def c_height_calc(self,arr): 
-
-        starttime = timeit.default_timer()
-        output = np.zeros((arr.shape[0],arr.shape[1]),dtype=np.uint8)
-
-        mult = self.waterlevel/6
-       # mult= int(mult)
-        mult=1000
-        deepwater = arr[:,:]>self.waterlevel+mult
-        arr[deepwater] = -1 
-        water = arr[:,:]>self.waterlevel
-        arr[water] = -1 
-        landA = arr[:,:]>self.waterlevel-mult
-        arr[landA] = -1
-        landB = arr[:,:]>self.waterlevel-(mult*2)
-        arr[landB] = -1
-        landC = arr[:,:]>self.waterlevel-(mult*3)
-        arr[landC] = -1
-        landD = arr[:,:]>self.waterlevel-(mult*4)
-        arr[landD] = -1
-        landE = arr[:,:]>self.waterlevel-(mult*5)
-        arr[landE] = -1
-        landF = arr[:,:]>self.waterlevel-(mult*6)
-        arr[landF] = -1
-        output[landF] = 250
-        output[landE] = 240
-        output[landD] = 220
-        output[landC] = 200
-        output[landB] = 150
-        output[landA] = 100
-        output[water] = 50
-        output[deepwater] = 20
-        img = Image.fromarray(output,"L").convert("RGB")
-        data = np.array(img)
-                #landF
-        data[np.all(data == [250,250,250], axis=-1)] = self.colorF
-                #landE
-        data[np.all(data == [240,240,240], axis=-1)] = self.colorE
-        #landD
-        data[np.all(data == [220,220,220], axis=-1)] = self.colorD
-        #landC
-        data[np.all(data == [200,200,200], axis=-1)] = self.colorC
-        #landB
-        data[np.all(data == [150,150,150], axis=-1)] = self.colorB
-        #landA
-        data[np.all(data == [100,100,100], axis=-1)] = self.colorA
-        #water
-        data[np.all(data == [50,50,50], axis=-1)] = self.colorWater
-        #deepwater
-        data[np.all(data == [20,20,20], axis=-1)] = self.colorDeepWater
-        print("Time for c_height_calc :", timeit.default_timer() - starttime)
-        return data
-
 
     def analyze_data_rgb(self, data):
         starttime = timeit.default_timer()
@@ -366,7 +342,7 @@ class Data_Interpreter(Thread):
             return (0,0)
         
 
-    #todo 
+    #todo: if the system remains shape based, this should prevent "flickering" in the shape detection 
     def shape_comparator(self, new_shapes):
         if len(self.shapes)==0:
             self.shapes=new_shapes
@@ -375,6 +351,8 @@ class Data_Interpreter(Thread):
                 for new_shape in new_shapes:
                     if (new_shape[1][0] <= old_shape[1][0]+self.shape_offset or new_shape[1][0] >= old_shape[1][0]-self.shape_offset) and (new_shape[1][1] <= old_shape[1][1]+self.shape_offset or new_shape[1][1] >= old_shape[1][1]-self.shape_offset):
                         print("same shape detected")
+
+
 
     def tree_placer(self,img, pos_list):
         rimg = Image.fromarray(img,"RGB").convert("RGBA")
