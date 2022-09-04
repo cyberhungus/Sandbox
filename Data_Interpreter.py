@@ -7,6 +7,7 @@ import frame_convert2 as fc
 import numpy as np
 from PIL import Image, ImageFilter
 import cv2 as cv
+#from cv2 import aruco
 import timeit
 import imutils as imu
 import os
@@ -58,6 +59,8 @@ class Data_Interpreter(Thread):
   # 
         self.lookup_table = self.generate_LUT()
 
+        self.displaysize =(1920,1080)
+        self.displayoffset = 50 
 
     def run(self):
         while 1:
@@ -150,12 +153,17 @@ class Data_Interpreter(Thread):
                 #this section checks for new image data and then runs the neccessary functions on that data 
                 else:
                     #starttime = timeit.default_timer()
-                    #processed_data_depth = self.c_height_calc(new_data[0])
+                    #processed_data_depth = self.c_height_calc(new_data[0])w
+
+
                     processed_data_depth = self.height_transform_lut(new_data[0])
-                    analysis_result_list = self.analyze_data_rgb(new_data[1])
                     line_data_depth = self.draw_height_lines(processed_data_depth)
-                    self.shape_comparator(analysis_result_list)
-                    full_img = self.composite_depth_and_rgb(line_data_depth,analysis_result_list)
+                    aruco_list = self.read_aruco(new_data[1])
+                    #analysis_result_list = self.analyze_data_rgb(new_data[1])
+                    full_img = self.aruco_obj_placer(line_data_depth, aruco_list)
+                    #self.shape_comparator(analysis_result_list)
+                    #full_img = self.composite_depth_and_rgb(line_data_depth,analysis_result_list)
+
                     if self.tree_state == True:
                         full_img = self.tree_placer(full_img, self.tree_manager.get_Tree_Positions())
 
@@ -163,50 +171,32 @@ class Data_Interpreter(Thread):
                     self.output.put_nowait(("ANALYZED",full_img))
                    # print("Time for color convert algorithm :", timeit.default_timer() - starttime)
 
+    def read_aruco(self,img):
+        gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+        aruco_dict = cv.aruco.Dictionary_get(cv.aruco.DICT_4X4_250)
+        parameters =  cv.aruco.DetectorParameters_create()
+        corners, ids, rejectedImgPoints = cv.aruco.detectMarkers(gray, aruco_dict, parameters=parameters)
+        output=[]
+        if ids is not None:
+            for x in range(len(ids)):
+               output.append((ids[x],corners[x]))
+        return output
 
+    def aruco_obj_placer(self, img, resultlist):
+        data = img.copy()
+        if resultlist is not None:
+            if len(resultlist)>0:
+                for item in resultlist:
 
-    #sets threshold values for better image and shape recognition based on a color value 
-    def calculate_color_correct(self, input_color):
-        if input_color[0] >=250 or input_color[0] >=250 or input_color[0] >=250:
-            print("illegal color")
-        else:
-            print("input_color is ", input_color, type(input_color))
-            print(type(self.shapeThreshHigh))
-            self.shapeThreshLow = ((input_color[2]-self.thresholdval),(input_color[1]-self.thresholdval),(input_color[0]-self.thresholdval))
-            self.shapeThreshHigh = ((input_color[2]+self.thresholdval),(input_color[1]+self.thresholdval),(input_color[0]+self.thresholdval))
-            print(type(self.shapeThreshHigh),self.shapeThreshHigh)
+                    for point in item[1][0]:
+                        print("POINT",point)
+                        cv.circle(data,(int(point[0]),int(point[1])),2,(0,0,222))
+        return data
 
-    #combines regular depth camera data and AR data 
-    def composite_depth_and_rgb(self, depth, results):
-        for item in results:
-            #cv.circle(depth,item[1],10,(255,0,255))
-           # cv.putText(depth,item[2],(item[1][0]-20,item[1][1]),0,0.5,(255,255,255))
-            x_offset = 10 
-            y_offset = 10 
-            x_min,y_min = item[1][0]-x_offset,item[1][1]-y_offset
-            x_max,y_max = item[1][0]+x_offset,item[1][1]+y_offset
-            housecpy = self.houseIMG.copy()
-            resized = cv.resize(housecpy, (2*x_offset,2*y_offset), interpolation = cv.INTER_AREA)
-            try:
-                depth[y_min:y_max,x_min:x_max] = resized
-            except:
-                print("error placing ar marker ")
-        return depth
+    def package_for_display(self):
+        pass
+        
 
-
-
-    
-    #this function does some neccessary conversions, putting the 
-    def do_pretty_rgb(self, data):
-        if self.is_mock==False:
-            pretty_img = fc.pretty_depth_cv(data)
-            img = pretty_img
-        else:
-            #img = Image.fromarray(data,"L").convert("RGB")
-            img=data
-        #.filter(ImageFilter.EDGE_ENHANCE)
-        rgb_array = np.array(img)
-        return rgb_array
 
     def generate_LUT(self):
         lookup_table = np.zeros((256,1,3),dtype=np.uint8)
@@ -237,7 +227,7 @@ class Data_Interpreter(Thread):
             else:
                 color_table.append([255,255,255])
 
-            print(num, ":::",lookup_table[num],":::",color_table[num])
+       #     print(num, ":::",lookup_table[num],":::",color_table[num])
             #red
             lookup_table[num,0,0]= color_table[num][0]
             #green
@@ -253,7 +243,7 @@ class Data_Interpreter(Thread):
         distance = value-rangeMin
         percentage = 100 * float(distance)/float(scale)
         percentage = percentage/100
-        print(percentage)
+      #  print(percentage)
         newRed = colorMin[2] + percentage * (colorMax[2]- colorMin[2]);
         newGreen = colorMin[1] + percentage * (colorMax[1]- colorMin[1]);
         newBlue = colorMin[0] + percentage * (colorMax[0]- colorMin[0]);
@@ -277,70 +267,7 @@ class Data_Interpreter(Thread):
         data[line_pixels]=self.lineBrown
         return data
 
-    def analyze_data_rgb(self, data):
-        starttime = timeit.default_timer()
-
-        #work_data_rgb = fc.video_cv(data)
-        processed_data_rgb = self.find_contours(data)
-        print("Time for analyse rgb :", timeit.default_timer() - starttime)
-        return processed_data_rgb
-
-    def find_contours(self, data):
-        thresh_blur_grey = cv.inRange(data, self.shapeThreshLow ,self.shapeThreshHigh)
-        contours = cv.findContours(thresh_blur_grey.copy(),cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
-        contours = imu.grab_contours(contours)
-        result_list = []
-        for contour in contours:
-            corn_number = self.contour_processor(contour)
-            if corn_number == 0:
-                pass
-            elif corn_number == 3:
-                center_tuple = self.find_contour_center(contour)
-                if center_tuple != (0,0):
-                    result_list.append([contour,center_tuple,"tri"])
-            elif corn_number == 4:
-                center_tuple = self.find_contour_center(contour)
-                if center_tuple != (0,0):
-                    result_list.append([contour,center_tuple,"sqr"])
-            elif corn_number == 5:
-                center_tuple = self.find_contour_center(contour)
-                if center_tuple != (0,0):
-                    result_list.append([contour,center_tuple,"pent"])
-            elif corn_number == 6:
-                center_tuple = self.find_contour_center(contour)
-                if center_tuple != (0,0):
-                    result_list.append([contour,center_tuple,"hex"])
-            elif corn_number == 8:
-                center_tuple = self.find_contour_center(contour)
-                if center_tuple != (0,0):
-                    result_list.append([contour,center_tuple,"oct"])
-
-        #test_img = np.concatenate((data,np.array(Image.fromarray(thresh_blur_grey,"L").convert("RGB"))),axis=1)
-        #cv.imshow("TEST",test_img)
-        #if cv.waitKey(10)==27:
-        #    pass
-
-        return result_list
-
-    #this function determines the number of corners a shape has 
-    def contour_processor(self, shape):
-        if len(shape)>self.minShapeSize:
-            perimeters = cv.arcLength(shape,True)
-            corners = cv.approxPolyDP(shape,0.04*perimeters,True)
-            return len(corners)
-        else:
-            return 0 
-
-    #determines the middle of a shape, which is where superimposed components are placed 
-    def find_contour_center(self, contour):
-        try:
-            moment = cv.moments(contour)
-            x_center = int(moment["m10"] / moment["m00"])
-            y_center = int(moment["m01"] / moment["m00"])
-            return (x_center, y_center)
-        except:
-            return (0,0)
-        
+    
 
     #todo: if the system remains shape based, this should prevent "flickering" in the shape detection 
     def shape_comparator(self, new_shapes):

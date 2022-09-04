@@ -1,13 +1,22 @@
 
+from itertools import filterfalse
+from pickle import FALSE
 import tkinter as tk 
 from tkinter import colorchooser
-
+from PIL import Image, ImageTk
 #class generates a tk inter gui
+import cv2
 class GUI_Manager:
     def __init__(self, manager):
         self.setting_manager = manager
 
+        self.latest_color_img = 0
 
+        self.newWindow_status = False
+
+        self.selected_points = []
+        
+    def start_gui(self):
         self.window = tk.Tk()
         self.label = tk.Label(self.window, text="Sandbox GUI")
 
@@ -81,11 +90,44 @@ class GUI_Manager:
         self.labelDW = tk.Button(self.window,text="Color DW",bg=self.colorDW, command=lambda: self.choose_Color("arrcolorDeepWater"))
         self.labelDW.grid(column=3,row=11)
 
+        self.masking_button = tk.Button(self.window, text="Masking", command= self.select_masking_points)
+        self.masking_button.grid(column=3,row=12)
+
+
         self.window.attributes('-topmost', 'true')
         self.window.mainloop()
 
- 
+    def on_close_new(self):
+        self.newWindow_status=False
+        self.newWindow.destroy()
 
+ 
+    def select_masking_points(self):
+        if self.newWindow_status == False:
+            x=1920/4
+            y=1080/4
+            dimension = (int(x),int(y))
+            small_img_array = cv2.resize(self.latest_color_img,dimension)
+            cv2.imwrite("tmp.png",small_img_array)
+            self.newWindow_status = True
+            self.newWindow = tk.Toplevel(self.window)
+            self.newWindow.title("New Window")
+            self.newWindow.protocol("WM_DELETE_WINDOW", self.on_close_new)
+            self.newWindow.geometry("2000x2000")
+            load = Image.open("tmp.png")
+            render = ImageTk.PhotoImage(load)
+        
+
+   
+            img = tk.Label(self.newWindow, image=render)
+            img.image = render
+            img.place(x=0, y=0)
+            img.bind("<Button-1>", self.imgclick)
+
+
+    def imgclick(self,info):
+        
+ 
 
     def waterSliderMove(self,arg):
         self.setting_manager.alter_setting("waterlevel",arg)
@@ -153,3 +195,7 @@ class GUI_Manager:
         self.labelF.config(bg=self.colorF)
         self.colorW =  self.bgr_array_color_hex(self.setting_manager.get_settings()['colorWater'])
         self.labelW.config(bg=self.colorW)
+
+    def register_latest_image(self,img):
+        self.latest_color_img = img
+        
