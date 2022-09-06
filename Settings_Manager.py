@@ -15,7 +15,7 @@ class Settings_Manager:
                          "colorDeepWater":(250,50,0,1),
                          "shapeThreshLow":(70,0,70),
                          "shapeThreshHigh":(100,45,100),
-                         "minShapeSize":50,
+                         "minShapeSize":1.5,
                          "refreshRate":5
                          }
         self.settings_dict = {"waterlevel":150,

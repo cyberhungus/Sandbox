@@ -7,6 +7,7 @@ import frame_convert2 as fc
 import numpy as np
 from PIL import Image, ImageFilter
 import cv2 as cv
+import cv2.aruco as aruco
 #from cv2 import aruco
 import timeit
 import imutils as imu
@@ -28,7 +29,8 @@ class Data_Interpreter(Thread):
             self.tree_manager = tm(10, 480,640)
 
 
-
+        self.borders_set = False
+        self.border_mask = 0
               
         #Region storing variables 
         self.lineBrown = (10,55,100)
@@ -62,6 +64,9 @@ class Data_Interpreter(Thread):
         self.displaysize =(1920,1080)
         self.displayoffset = 50 
 
+        self.img_resolution =(0,0)
+
+        self.maskpoints = [[[0,0],[0,500],[500,500],[500,0]]]
     def run(self):
         while 1:
             if not self.input.empty():
@@ -142,6 +147,9 @@ class Data_Interpreter(Thread):
                     elif new_data[0]=="minShapeSize":
                         self.minShapeSize = int(new_data[1])  
 
+                    elif new_data[0]=="mask_points":
+                        self.border_mask = self.generate_new_mask(new_data[1])
+
                     elif new_data[0]=="newTrees":
                         if self.tree_state==True:
                             self.tree_manager.generate_new_tree_pos(int(new_data[1]))  
@@ -155,47 +163,137 @@ class Data_Interpreter(Thread):
                     #starttime = timeit.default_timer()
                     #processed_data_depth = self.c_height_calc(new_data[0])w
 
-
+                    self.img_resolution = new_data[1].shape
                     processed_data_depth = self.height_transform_lut(new_data[0])
-                    line_data_depth = self.draw_height_lines(processed_data_depth)
-                    aruco_list = self.read_aruco(new_data[1])
-                    #analysis_result_list = self.analyze_data_rgb(new_data[1])
-                    full_img = self.aruco_obj_placer(line_data_depth, aruco_list)
-                    #self.shape_comparator(analysis_result_list)
-                    #full_img = self.composite_depth_and_rgb(line_data_depth,analysis_result_list)
-
+                   # line_data_depth = self.draw_height_lines(processed_data_depth)
+                    line_data_depth = self.draw_height_lines(new_data[0],processed_data_depth)
+                    full_img = self.process_aruco(new_data[1],line_data_depth)
                     if self.tree_state == True:
                         full_img = self.tree_placer(full_img, self.tree_manager.get_Tree_Positions())
 
+                    if self.borders_set==True:
+                        full_img= self.apply_sandbox_borders(full_img,self.border_mask)
 
-                    self.output.put_nowait(("ANALYZED",full_img))
+                    output_zeros = np.zeros((self.img_resolution[0],self.img_resolution[1],3),dtype=np.uint8)
+                    print("normale ", self.maskpoints, " new ", (self.maskpoints*self.minShapeSize))
+                    output_img = self.arucoAug((self.maskpoints*self.minShapeSize),0,output_zeros,full_img)
+                    #self.output.put_nowait(("ANALYZED",full_img))
+                    self.output.put_nowait(("DEPTH_TEST",full_img))
+                    self.output.put_nowait(("ANALYZED",output_img))
                    # print("Time for color convert algorithm :", timeit.default_timer() - starttime)
 
-    def read_aruco(self,img):
+    def generate_new_mask(self, points):
+        zeros = np.zeros((self.img_resolution[0],self.img_resolution[1],3),dtype=np.uint8)
+        zeros[points[0][0]:points[0][1],points[1][0]:points[1][1]] = (255,255,255)
+        print(zeros)
+        self.borders_set=True
+        return zeros
+
+    def apply_sandbox_borders(self, img, mask):
+        deepwater = mask[:,:,0]>0
+        img[deepwater] = self.colorDeepWater
+        return img
+
+    def process_aruco(self, img_rgb, img_depth):
+        img = img_rgb.copy()
+        new_img=img_depth
+        arucofound = self.findArucoMarkers(img)
+        # loop through all the markers and augment each one
+        if len(arucofound[0])!=0:
+            for bbox, id in zip(arucofound[0], arucofound[1]):
+                if id in range(0,4):
+                    
+                    center_calc_arr = []
+                    for point in bbox[0]:
+                        center_calc_arr.append([int(point[0]),int(point[1])])
+                  #  print("Found center for ID", id, ":", center_calc_arr,"MID",self.calc_middle(center_calc_arr))
+                    mid = self.calc_middle(center_calc_arr)
+                    self.maskpoints[0][int(id)][0]= mid[0]*self.minShapeSize
+                    self.maskpoints[0][int(id)][1]= mid[1]*self.minShapeSize
+                elif id == 10 :   
+                    new_img = self.arucoAug(bbox, id, img_depth, self.houseIMG)
+        return new_img
+
+    
+
+    def findArucoMarkers(self,img, markerSize = 4, totalMarkers=100, draw=True):                            
         gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-        aruco_dict = cv.aruco.Dictionary_get(cv.aruco.DICT_4X4_250)
-        parameters =  cv.aruco.DetectorParameters_create()
-        corners, ids, rejectedImgPoints = cv.aruco.detectMarkers(gray, aruco_dict, parameters=parameters)
-        output=[]
-        if ids is not None:
-            for x in range(len(ids)):
-               output.append((ids[x],corners[x]))
-        return output
+        key = getattr(aruco, f'DICT_{markerSize}X{markerSize}_{totalMarkers}')
+        arucoDict = aruco.Dictionary_get(key)
+        arucoParam = aruco.DetectorParameters_create()
+        bboxs, ids, rejected = aruco.detectMarkers(gray, arucoDict, parameters = arucoParam)
+        # print(ids)
+        if draw:
+            aruco.drawDetectedMarkers(img, bboxs)
+        return [bboxs, ids]
 
-    def aruco_obj_placer(self, img, resultlist):
-        data = img.copy()
-        if resultlist is not None:
-            if len(resultlist)>0:
-                for item in resultlist:
+    def arucoAug(self,bbox, id, img, imgAug, drawId = True):
+        tl = bbox[0][0][0], bbox[0][0][1]
+        tr = bbox[0][1][0], bbox[0][1][1]
+        br = bbox[0][2][0], bbox[0][2][1]
+        bl = bbox[0][3][0], bbox[0][3][1]
+        h, w, c = imgAug.shape
+        pts1 = np.array([tl, tr, br, bl])
+        pts2 = np.float32([[0,0], [w,0], [w,h], [0,h]])
+        matrix, _ = cv.findHomography(pts2, pts1)
+        imgout = cv.warpPerspective(imgAug, matrix, (img.shape[1], img.shape[0]))
+        cv.fillConvexPoly(img, pts1.astype(int), (0, 0, 0))
+        imgout = img + imgout
+        return imgout
 
-                    for point in item[1][0]:
-                        print("POINT",point)
-                        cv.circle(data,(int(point[0]),int(point[1])),2,(0,0,222))
-        return data
+
+    def calc_middle(self, points):
+        x = [p[0] for p in points]
+        y = [p[1] for p in points]
+        centroid = (int(sum(x) / len(points)),int( sum(y) / len(points)))
+       # print(centroid)
+        return centroid
 
     def package_for_display(self):
         pass
         
+
+    def draw_height_lines(self,data,data_lut):
+
+        #data_grey_simple = self.greyscale_for_height_lines(data)
+        #cv.imshow("CANNY",data_grey_simple)
+        data = cv.convertScaleAbs(data,alpha=0.06)
+        canny = cv.Canny(data, 0,255)
+        line_pixels = canny[:,:]>0
+        data_lut[line_pixels]=self.lineBrown
+        return data_lut
+
+    def greyscale_for_height_lines(self, arr):
+        output = np.zeros((arr.shape[0],arr.shape[1]),dtype=np.uint8)
+        mult = self.waterlevel/6
+       # mult= int(mult)
+        mult=1000
+        deepwater = arr[:,:]>self.waterlevel+mult
+        arr[deepwater] = -1 
+        water = arr[:,:]>self.waterlevel
+        arr[water] = -1 
+        landA = arr[:,:]>self.waterlevel-mult
+        arr[landA] = -1
+        landB = arr[:,:]>self.waterlevel-(mult*2)
+        arr[landB] = -1
+        landC = arr[:,:]>self.waterlevel-(mult*3)
+        arr[landC] = -1
+        landD = arr[:,:]>self.waterlevel-(mult*4)
+        arr[landD] = -1
+        landE = arr[:,:]>self.waterlevel-(mult*5)
+        arr[landE] = -1
+        landF = arr[:,:]>self.waterlevel-(mult*6)
+        arr[landF] = -1
+        output[landF] = 250
+        output[landE] = 240
+        output[landD] = 220
+        output[landC] = 200
+        output[landB] = 150
+        output[landA] = 100
+        output[water] = 50
+        output[deepwater] = 20
+
+        return output
 
 
     def generate_LUT(self):
@@ -205,27 +303,31 @@ class Data_Interpreter(Thread):
         remainder = (255-self.waterlevel)/6
         for num in range(256):
             if num in range(0,int(self.waterlevel/2)):
-                color_table.append(self.colorDeepWater)
+                color_table.append(self.colorG)   
+                
             elif num in range(int(self.waterlevel/2),self.waterlevel):
-                color_table.append(self.colorWater)            
+                color_table.append(self.make_gradient_color(num, int(self.waterlevel/2),int(self.waterlevel),self.colorG, self.colorF))
+                
+                         
             elif num in range(int(self.waterlevel),int(self.waterlevel+remainder)):
-                color_table.append(self.make_gradient_color(num, int(self.waterlevel),int(self.waterlevel+remainder),self.colorA,self.colorB))  
+                color_table.append(self.make_gradient_color(num, int(self.waterlevel),int(self.waterlevel+remainder),self.colorF,self.colorE)) 
+              
                 #color_table.append(self.colorA)
             elif num in range(int(self.waterlevel+remainder),int(self.waterlevel+remainder*2)):
-                color_table.append(self.make_gradient_color(num, int(self.waterlevel+remainder),int(self.waterlevel+remainder*2),self.colorB,self.colorC))    
-            elif num in range(int(self.waterlevel+remainder*2),int(self.waterlevel+remainder*3)):
-                color_table.append(self.make_gradient_color(num, int(self.waterlevel+remainder*2),int(self.waterlevel+remainder*3),self.colorC,self.colorD))   
-            elif num in range(int(self.waterlevel+remainder*3),int(self.waterlevel+remainder*4)):
-                color_table.append(self.make_gradient_color(num, int(self.waterlevel+remainder*3),int(self.waterlevel+remainder*4),self.colorD,self.colorE))
-            elif num in range(int(self.waterlevel+remainder*4),int(self.waterlevel+remainder*5)):
-                 color_table.append(self.make_gradient_color(num, int(self.waterlevel+remainder*4),int(self.waterlevel+remainder*5),self.colorE,self.colorF)) 
-            elif num in range(int(self.waterlevel+remainder*5),int(self.waterlevel+remainder*6)):
-                color_table.append(self.make_gradient_color(num, int(self.waterlevel+remainder*5),int(self.waterlevel+remainder*6),self.colorF, self.colorG))
+                 color_table.append(self.make_gradient_color(num, int(self.waterlevel+remainder*1),int(self.waterlevel+remainder*2),self.colorE,self.colorD))
                 
+            elif num in range(int(self.waterlevel+remainder*2),int(self.waterlevel+remainder*3)):
+                color_table.append(self.make_gradient_color(num, int(self.waterlevel+remainder*2),int(self.waterlevel+remainder*3),self.colorD,self.colorC))   
+            elif num in range(int(self.waterlevel+remainder*3),int(self.waterlevel+remainder*4)):
+               color_table.append(self.make_gradient_color(num, int(self.waterlevel+remainder*3),int(self.waterlevel+remainder*4),self.colorC,self.colorB))    
+            elif num in range(int(self.waterlevel+remainder*4),int(self.waterlevel+remainder*5)):
+                color_table.append(self.make_gradient_color(num, int(self.waterlevel+remainder*4),int(self.waterlevel+remainder*5),self.colorB,self.colorA))  
+            elif num in range(int(self.waterlevel+remainder*5),int(self.waterlevel+remainder*6)):
+                color_table.append(self.colorWater)   
             elif num in range(int(self.waterlevel+remainder*6),int(255)):
-                color_table.append(self.colorG)   
+                color_table.append(self.colorDeepWater)
             else:
-                color_table.append([255,255,255])
+                color_table.append([255,0,255])
 
        #     print(num, ":::",lookup_table[num],":::",color_table[num])
             #red
@@ -259,13 +361,7 @@ class Data_Interpreter(Thread):
 
 
 
-    def draw_height_lines(self,data):
-        data_grey = Image.fromarray(data,"RGB").convert("L")
-        data_grey = np.array(data_grey)
-        canny = cv.Canny(data_grey, 0,255)
-        line_pixels = canny[:,:]>0
-        data[line_pixels]=self.lineBrown
-        return data
+
 
     
 
@@ -300,6 +396,8 @@ class Data_Interpreter(Thread):
             cv.circle(return_img,item,5,(0,220,0))
             #cv.putText(img,str(color_at_pos),item,0,0.5,(255,255,255))
         return return_img
+
+
 
 
     def plant_tree(self,size,pos,img):

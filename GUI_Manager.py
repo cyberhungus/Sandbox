@@ -29,8 +29,8 @@ class GUI_Manager:
         self.labelWater.grid(column=0,row=2)
 
 
-        self.shapeminslider = tk.Scale(self.window, from_=30, to=400, command= self.shapeSliderMove)
-        self.shapeminslider.set(self.setting_manager.get_settings()['minShapeSize'])
+        self.shapeminslider = tk.Scale(self.window, from_=100, to=300, command= self.shapeSliderMove)
+        self.shapeminslider.set(self.setting_manager.get_settings()['minShapeSize']*100)
         self.shapeminslider.grid(column=1,row=1)
         self.labelShape = tk.Label(self.window, text="Shapesize")
         self.labelShape.grid(column=1,row=2)
@@ -113,7 +113,7 @@ class GUI_Manager:
             self.newWindow = tk.Toplevel(self.window)
             self.newWindow.title("New Window")
             self.newWindow.protocol("WM_DELETE_WINDOW", self.on_close_new)
-            self.newWindow.geometry("2000x2000")
+            self.newWindow.geometry("600x600")
             load = Image.open("tmp.png")
             render = ImageTk.PhotoImage(load)
         
@@ -121,12 +121,28 @@ class GUI_Manager:
    
             img = tk.Label(self.newWindow, image=render)
             img.image = render
-            img.place(x=0, y=0)
+            img.pack()
             img.bind("<Button-1>", self.imgclick)
-
+            self.labelPA =tk.Label(self.newWindow, text="point not selected")
+            self.labelPA.pack()
+            self.labelPB =tk.Label(self.newWindow, text="point not selected")
+            self.labelPB.pack()
 
     def imgclick(self,info):
-        
+        x = info.x
+        y = info.y
+        if len(self.selected_points)==0:
+            self.selected_points.append([x*4,y*4])
+            self.labelPA.config(text=str(x*4)+":"+str(y*4))
+        elif len(self.selected_points)==1:
+            self.selected_points.append([x*4,y*4])
+            self.labelPB.config(text=str(x*4)+":"+str(y*4))
+            self.setting_manager.alter_setting("mask_points",self.selected_points)
+            self.selected_points=[]
+            self.newWindow_status=False
+            self.newWindow.destroy()
+
+
  
 
     def waterSliderMove(self,arg):
@@ -135,7 +151,7 @@ class GUI_Manager:
         self.label_remainder.config(text=str(val))
 
     def shapeSliderMove(self,arg):
-        self.setting_manager.alter_setting("minShapeSize",arg)
+        self.setting_manager.alter_setting("minShapeSize",int(arg)/100)
 
     def refreshSliderMove(self,arg):
         self.setting_manager.alter_setting("refreshRate",arg)
