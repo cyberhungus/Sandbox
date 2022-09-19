@@ -1,5 +1,7 @@
 
 from cgitb import lookup
+from ctypes.wintypes import SIZE
+from queue import Empty
 from threading import Thread 
 from multiprocessing import Queue
 from turtle import color
@@ -46,9 +48,8 @@ class Data_Interpreter(Thread):
         self.colorDeepWater = (250,50,0)
         self.shapeThreshLow = (70,0,70)
         self.shapeThreshHigh = (100,45,100)
-        self.minShapeSize = 40
 
-        self.thresholdval = 20 
+
 
         self.shape_offset= 20
 
@@ -58,174 +59,187 @@ class Data_Interpreter(Thread):
 
         filepath = os.getcwd()+"/assets/tree.png"
         self.treeIMG = cv.imread(filepath,cv.IMREAD_UNCHANGED)
-  # 
+  #     
         self.lookup_table = self.generate_LUT()
 
         self.displaysize =(1920,1080)
+
         self.displayoffset = 50 
 
-        self.img_resolution =(0,0)
 
-        self.maskpoints = [[[0,0],[0,500],[500,500],[500,0]]]
+        self.maskpoints = [[0,0],[1080,1920]]
+        self.lastMaskPoints = 0 
+        self.standardmask = [[0,0],[1920,0],[0,1080],[1920,1080]]
+
+        self.xoff = 0
+        self.yoff=0
+
+
+        self.realArucoSizeMM = 26.28
+        self.focal_length = 1233.24
+        self.markerSizePixel = 0 
+        self.camera_height = 1 
+
+
     def run(self):
         while 1:
             if not self.input.empty():
                 new_data = self.input.get_nowait()
                 #this section of the code is used to alter parameters in the data_interpreter from a diffent process 
                 if type(new_data[0]) == str:
-                    if new_data[0]=="waterlevel":
-                        self.waterlevel = int(new_data[1])
-                        
-                        self.lookup_table = self.generate_LUT()
-
-                    elif new_data[0]=="colorA":
-                        self.colorA = (int(new_data[1][0]),int(new_data[1][1]),int(new_data[1][2]))
-                        
-                        self.lookup_table = self.generate_LUT()
-                    elif new_data[0]=="colorB":
-                        self.colorB = (int(new_data[1][0]),int(new_data[1][1]),int(new_data[1][2]))
-
-                        self.lookup_table = self.generate_LUT()
-                    elif new_data[0]=="colorC":
-                        self.colorC = (int(new_data[1][0]),int(new_data[1][1]),int(new_data[1][2]))
-
-                        self.lookup_table = self.generate_LUT()
-                    elif new_data[0]=="colorD":
-                        self.colorD = (int(new_data[1][0]),int(new_data[1][1]),int(new_data[1][2]))
-                        
-                        self.lookup_table = self.generate_LUT()
-
-                    elif new_data[0]=="colorE":
-                        self.colorE = (int(new_data[1][0]),int(new_data[1][1]),int(new_data[1][2]))
-                        
-                        self.lookup_table = self.generate_LUT()
-                    elif new_data[0]=="colorF":
-                        self.colorF = (int(new_data[1][0]),int(new_data[1][1]),int(new_data[1][2]))
-                        
-                        self.lookup_table = self.generate_LUT()
-                    elif new_data[0]=="colorWater":
-                        self.colorWater = (int(new_data[1][0]),int(new_data[1][1]),int(new_data[1][2]))
-
-                        self.lookup_table = self.generate_LUT()
-                    elif new_data[0]=="colorDeepWater":
-                        self.colorWater = (int(new_data[1][0]),int(new_data[1][1]),int(new_data[1][2]))
-                        
-                        self.lookup_table = self.generate_LUT()
-                    elif new_data[0]=="arrcolorA":
-                        self.colorA = (int(new_data[1][2]),int(new_data[1][1]),int(new_data[1][0]))
-                        self.lookup_table = self.generate_LUT()
-        
-
-                    elif new_data[0]=="arrcolorB":
-                        self.colorB = (int(new_data[1][2]),int(new_data[1][1]),int(new_data[1][0]))
-                        self.lookup_table = self.generate_LUT()
-                    elif new_data[0]=="arrcolorC":
-                        self.colorC = (int(new_data[1][2]),int(new_data[1][1]),int(new_data[1][0]))
-                        self.lookup_table = self.generate_LUT()
-                    elif new_data[0]=="arrcolorD":
-                        self.colorD = (int(new_data[1][2]),int(new_data[1][1]),int(new_data[1][0]))
-                        self.lookup_table = self.generate_LUT()
-
-                    elif new_data[0]=="arrcolorE":
-                        self.colorE = (int(new_data[1][2]),int(new_data[1][1]),int(new_data[1][0]))
-                        self.lookup_table = self.generate_LUT()
-                    elif new_data[0]=="arrcolorF":
-                        self.colorF = (int(new_data[1][2]),int(new_data[1][1]),int(new_data[1][0]))
-                        self.lookup_table = self.generate_LUT()
-                    elif new_data[0]=="arrcolorWater":
-                        self.colorWater = (int(new_data[1][2]),int(new_data[1][1]),int(new_data[1][0]))
-                        self.lookup_table = self.generate_LUT()
-                    elif new_data[0]=="arrcolorDeepWater":
-                        self.colorDeepWater = (int(new_data[1][2]),int(new_data[1][1]),int(new_data[1][0]))
-                        self.lookup_table = self.generate_LUT()                      
-                    elif new_data[0]=="shapeThreshLow":
-                        self.shapeThreshLow = (int(new_data[1][0]),int(new_data[1][1]),int(new_data[1][2]))
-
-                    elif new_data[0]=="shapeThreshHigh":
-                        self.shapeThreshHigh = (int(new_data[1][0]),int(new_data[1][1]),int(new_data[1][2]))      
-                    
-                    elif new_data[0]=="minShapeSize":
-                        self.minShapeSize = int(new_data[1])  
-
-                    elif new_data[0]=="mask_points":
-                        self.border_mask = self.generate_new_mask(new_data[1])
-
-                    elif new_data[0]=="newTrees":
-                        if self.tree_state==True:
-                            self.tree_manager.generate_new_tree_pos(int(new_data[1]))  
-
-                    elif new_data[0]=="color_correct":
-                        print("performing color correct")
-                        self.calculate_color_correct((int(new_data[1][0]),int(new_data[1][1]),int(new_data[1][2])))
-                    
-                #this section checks for new image data and then runs the neccessary functions on that data 
+                    self.argDecoder(new_data)
+                #this section takes new image data and then runs the neccessary functions on that data 
                 else:
                     #starttime = timeit.default_timer()
-                    #processed_data_depth = self.c_height_calc(new_data[0])w
+                    
+                    self.output.put_nowait(("DEPTH_TEST",new_data[0]))
 
-                    self.img_resolution = new_data[1].shape
+                    self.findmask(new_data[1])
+                    print(self.maskpoints)
+          
                     processed_data_depth = self.height_transform_lut(new_data[0])
-                   # line_data_depth = self.draw_height_lines(processed_data_depth)
+                  #  print(processed_data_depth.shape)
                     line_data_depth = self.draw_height_lines(new_data[0],processed_data_depth)
+                   # print(line_data_depth.shape)
                     full_img = self.process_aruco(new_data[1],line_data_depth)
-                    if self.tree_state == True:
-                        full_img = self.tree_placer(full_img, self.tree_manager.get_Tree_Positions())
-
-                    if self.borders_set==True:
-                        full_img= self.apply_sandbox_borders(full_img,self.border_mask)
-
-                    output_zeros = np.zeros((self.img_resolution[0],self.img_resolution[1],3),dtype=np.uint8)
-                    print("normale ", self.maskpoints, " new ", (self.maskpoints*self.minShapeSize))
-                    output_img = self.arucoAug((self.maskpoints*self.minShapeSize),0,output_zeros,full_img)
-                    #self.output.put_nowait(("ANALYZED",full_img))
-                    self.output.put_nowait(("DEPTH_TEST",full_img))
-                    self.output.put_nowait(("ANALYZED",output_img))
+                   # print(full_img.shape)
+                    self.output.put_nowait(("ANALYZED",self.applymask(full_img)))
                    # print("Time for color convert algorithm :", timeit.default_timer() - starttime)
 
-    def generate_new_mask(self, points):
-        zeros = np.zeros((self.img_resolution[0],self.img_resolution[1],3),dtype=np.uint8)
-        zeros[points[0][0]:points[0][1],points[1][0]:points[1][1]] = (255,255,255)
-        print(zeros)
-        self.borders_set=True
-        return zeros
 
-    def apply_sandbox_borders(self, img, mask):
-        deepwater = mask[:,:,0]>0
-        img[deepwater] = self.colorDeepWater
-        return img
+
+
+
+    def findmask(self, img):
+       # try:
+            self.lastMaskPoints= self.maskpoints
+            self.maskpoints = []
+            arucofound = self.findArucoMarkers(img)
+           # print("Arucos found" , arucofound==True)
+            # loop through all the markers and augment each one
+            if arucofound:
+               # print("arucofound")
+                if len(arucofound[0])>=4:
+                    for bbox, codeID in zip(arucofound[0], arucofound[1]):
+                        if codeID in range(0,4):
+                            center_calc_arr = []
+                            for point in bbox[0]:
+                                center_calc_arr.append([int(point[0]),int(point[1])])
+                            #print("Found fiducial center for ID", id, ":", center_calc_arr,"MID",self.calc_middle(center_calc_arr))
+                            sorted_points = self.sortpoints(center_calc_arr)
+                            length = sorted_points[1]-sorted_points[0]
+                            
+                            self.markerSizePixel  =  np.amax(length)
+                            print("Length is ", self.markerSizePixel )
+                            self.calculate_camera_height(self.markerSizePixel)
+
+                            mid = self.calc_middle(center_calc_arr)
+                            self.maskpoints.append(mid)
+                #print("new midpoints", self.maskpoints)
+                self.maskpoints = self.sortpoints(self.maskpoints)
+            else:
+                #print("NO MASK FOUND")
+                self.maskpoints = self.standardmask
+
+    def calculate_camera_height(self, object_size_pixel):
+        size = object_size_pixel
+        result = (self.realArucoSizeMM*1233.24)/size 
+        print("camera distance is ", result)
+
+
+
+
+    #tl,tr,bl,br
+    def sortpoints(self,pts):
+        try:
+            pts = np.array(pts)
+            rect = np.zeros((4, 2), dtype = "float32")
+            s = pts.sum(axis = 1)
+            rect[0] = pts[np.argmin(s)]
+            rect[2] = pts[np.argmax(s)]
+            diff = np.diff(pts, axis = 1)
+            rect[1] = pts[np.argmin(diff)]
+            rect[3] = pts[np.argmax(diff)]
+            return rect
+        except Exception as ex:
+            return self.sortpoints(self.lastMaskPoints)
+
+    def applymask(self, imgAug):
+        img = np.ones((1080,1920,3),dtype=np.uint8)
+        h, w, c = imgAug.shape
+        pts1 = np.array(np.array(self.maskpoints))
+        print("applymask new points", pts1)
+        pts2 = np.float32([[0,0], [w,0], [w,h], [0,h]])
+        matrix, _ = cv.findHomography(pts1, pts2)
+        imgout = cv.warpPerspective(imgAug, matrix, (img.shape[1], img.shape[0]))
+        cv.fillConvexPoly(img, pts1.astype(int), (0, 0, 0))
+        imgout = img + imgout
+        return imgout
+
+    def applymask2(self, img):
+        try:
+            x,y=[],[]
+            for point in self.maskpoints:
+                x.append(point[0])
+                y.append(point[1])
+            x,y, = np.array(x),np.array(y)
+            xMax = x.max()
+            xMin = x.min()
+            yMax = y.max()
+            yMin = y.min()
+        
+            toReturn=img[int(yMin):int(yMax),int(xMin):int(xMax)]
+           # print(toReturn.shape)
+            return toReturn
+        except Exception as ex:
+            
+            print("apply mask error", ex , "for maskpoints:" , self.maskpoints)
+            return img
 
     def process_aruco(self, img_rgb, img_depth):
+        #print(img_rgb.shape,"Depth: ",img_depth.shape)
         img = img_rgb.copy()
         new_img=img_depth
         arucofound = self.findArucoMarkers(img)
         # loop through all the markers and augment each one
-        if len(arucofound[0])!=0:
-            for bbox, id in zip(arucofound[0], arucofound[1]):
-                if id in range(0,4):
-                    
-                    center_calc_arr = []
-                    for point in bbox[0]:
-                        center_calc_arr.append([int(point[0]),int(point[1])])
-                  #  print("Found center for ID", id, ":", center_calc_arr,"MID",self.calc_middle(center_calc_arr))
-                    mid = self.calc_middle(center_calc_arr)
-                    self.maskpoints[0][int(id)][0]= mid[0]*self.minShapeSize
-                    self.maskpoints[0][int(id)][1]= mid[1]*self.minShapeSize
-                elif id == 10 :   
-                    new_img = self.arucoAug(bbox, id, img_depth, self.houseIMG)
-        return new_img
-
+        if arucofound:
+            #print(arucofound,len(arucofound))
+            if len(arucofound[0])!=0:
+               # print("len aruco not null")
+                for bbox, id in zip(arucofound[0], arucofound[1]):
+                    if id == 10 :   
+                        new_img = self.arucoAug(bbox, id, img_depth, self.houseIMG)
+                return new_img
+            else:
+               # print("returning img")
+                return new_img
+                
+        else:
+           # print("returning img")
+            return new_img
     
 
-    def findArucoMarkers(self,img, markerSize = 4, totalMarkers=100, draw=True):                            
-        gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-        key = getattr(aruco, f'DICT_{markerSize}X{markerSize}_{totalMarkers}')
-        arucoDict = aruco.Dictionary_get(key)
-        arucoParam = aruco.DetectorParameters_create()
-        bboxs, ids, rejected = aruco.detectMarkers(gray, arucoDict, parameters = arucoParam)
-        # print(ids)
-        if draw:
-            aruco.drawDetectedMarkers(img, bboxs)
-        return [bboxs, ids]
+    def findArucoMarkers(self,img, markerSize = 4, totalMarkers=100, draw=False):         
+        try:
+           # print("find ar markers")
+            gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+          #  cv.imshow("test",gray)
+           # cv.waitKey(1)
+            #print("find aruco gray shape:",gray.shape)
+            key = getattr(aruco, f'DICT_{markerSize}X{markerSize}_{totalMarkers}')
+            arucoDict = aruco.Dictionary_get(key)
+            arucoParam = aruco.DetectorParameters_create()
+            bboxs, ids, rejected = aruco.detectMarkers(gray, arucoDict, parameters = arucoParam)
+            print(ids)
+            if draw:
+                aruco.drawDetectedMarkers(img, bboxs)
+           # print("find aruco done ")
+            return [bboxs, ids]
+        except Exception as ex:
+            print("aruco finder exception",ex)
+            return []
+
+
 
     def arucoAug(self,bbox, id, img, imgAug, drawId = True):
         tl = bbox[0][0][0], bbox[0][0][1]
@@ -246,7 +260,6 @@ class Data_Interpreter(Thread):
         x = [p[0] for p in points]
         y = [p[1] for p in points]
         centroid = (int(sum(x) / len(points)),int( sum(y) / len(points)))
-       # print(centroid)
         return centroid
 
     def package_for_display(self):
@@ -254,45 +267,19 @@ class Data_Interpreter(Thread):
         
 
     def draw_height_lines(self,data,data_lut):
+        data = data.astype("uint8")
+        try:
 
-        #data_grey_simple = self.greyscale_for_height_lines(data)
-        #cv.imshow("CANNY",data_grey_simple)
-        data = cv.convertScaleAbs(data,alpha=0.06)
-        canny = cv.Canny(data, 0,255)
-        line_pixels = canny[:,:]>0
-        data_lut[line_pixels]=self.lineBrown
-        return data_lut
+            canny = cv.Canny(data, 0,255)
+            line_pixels = canny[:,:]>0
+            data_lut[line_pixels]=self.lineBrown
+            return data_lut
+        except Exception as ex:
+            print("Canny Error",ex)
+            return data
 
     def greyscale_for_height_lines(self, arr):
-        output = np.zeros((arr.shape[0],arr.shape[1]),dtype=np.uint8)
-        mult = self.waterlevel/6
-       # mult= int(mult)
-        mult=1000
-        deepwater = arr[:,:]>self.waterlevel+mult
-        arr[deepwater] = -1 
-        water = arr[:,:]>self.waterlevel
-        arr[water] = -1 
-        landA = arr[:,:]>self.waterlevel-mult
-        arr[landA] = -1
-        landB = arr[:,:]>self.waterlevel-(mult*2)
-        arr[landB] = -1
-        landC = arr[:,:]>self.waterlevel-(mult*3)
-        arr[landC] = -1
-        landD = arr[:,:]>self.waterlevel-(mult*4)
-        arr[landD] = -1
-        landE = arr[:,:]>self.waterlevel-(mult*5)
-        arr[landE] = -1
-        landF = arr[:,:]>self.waterlevel-(mult*6)
-        arr[landF] = -1
-        output[landF] = 250
-        output[landE] = 240
-        output[landD] = 220
-        output[landC] = 200
-        output[landB] = 150
-        output[landA] = 100
-        output[water] = 50
-        output[deepwater] = 20
-
+        output = cv.convertScaleAbs(arr,alpha=0.5)
         return output
 
 
@@ -311,11 +298,8 @@ class Data_Interpreter(Thread):
                          
             elif num in range(int(self.waterlevel),int(self.waterlevel+remainder)):
                 color_table.append(self.make_gradient_color(num, int(self.waterlevel),int(self.waterlevel+remainder),self.colorF,self.colorE)) 
-              
-                #color_table.append(self.colorA)
             elif num in range(int(self.waterlevel+remainder),int(self.waterlevel+remainder*2)):
                  color_table.append(self.make_gradient_color(num, int(self.waterlevel+remainder*1),int(self.waterlevel+remainder*2),self.colorE,self.colorD))
-                
             elif num in range(int(self.waterlevel+remainder*2),int(self.waterlevel+remainder*3)):
                 color_table.append(self.make_gradient_color(num, int(self.waterlevel+remainder*2),int(self.waterlevel+remainder*3),self.colorD,self.colorC))   
             elif num in range(int(self.waterlevel+remainder*3),int(self.waterlevel+remainder*4)):
@@ -328,16 +312,12 @@ class Data_Interpreter(Thread):
                 color_table.append(self.colorDeepWater)
             else:
                 color_table.append([255,0,255])
-
-       #     print(num, ":::",lookup_table[num],":::",color_table[num])
             #red
             lookup_table[num,0,0]= color_table[num][0]
             #green
             lookup_table[num,0,1]=color_table[num][1]
             #blue
             lookup_table[num,0,2]=color_table[num][2]
-
-
         return lookup_table
 
     def make_gradient_color(self,value,rangeMin,rangeMax, colorMin, colorMax):
@@ -345,36 +325,15 @@ class Data_Interpreter(Thread):
         distance = value-rangeMin
         percentage = 100 * float(distance)/float(scale)
         percentage = percentage/100
-      #  print(percentage)
         newRed = colorMin[2] + percentage * (colorMax[2]- colorMin[2]);
         newGreen = colorMin[1] + percentage * (colorMax[1]- colorMin[1]);
         newBlue = colorMin[0] + percentage * (colorMax[0]- colorMin[0]);
-
         return (newRed,newGreen,newBlue)
 
-    def height_transform_lut(self, data):
-        
-        data = cv.convertScaleAbs(data,alpha=0.06)
+    def height_transform_lut(self, data):    
         data = Image.fromarray(data,"L").convert("RGB")
         data = np.array(data)
         return cv.LUT(data,self.lookup_table)
-
-
-
-
-
-    
-
-    #todo: if the system remains shape based, this should prevent "flickering" in the shape detection 
-    def shape_comparator(self, new_shapes):
-        if len(self.shapes)==0:
-            self.shapes=new_shapes
-        else:
-            for old_shape in self.shapes:
-                for new_shape in new_shapes:
-                    if (new_shape[1][0] <= old_shape[1][0]+self.shape_offset or new_shape[1][0] >= old_shape[1][0]-self.shape_offset) and (new_shape[1][1] <= old_shape[1][1]+self.shape_offset or new_shape[1][1] >= old_shape[1][1]-self.shape_offset):
-                        print("same shape detected")
-
 
 
     def tree_placer(self,img, pos_list):
@@ -414,8 +373,96 @@ class Data_Interpreter(Thread):
             for c in range(3):
                 img[y_min:y_max,x_min:x_max,c] = (alpha_s * resized[:, :, c] + alpha_l * img[y_min:y_max,x_min:x_max, c])
         except Exception as ex :
-            pass
+            print(ex)
 
 
     def rgba_help(self, color, a_val):
         return (color[0],color[1],color[2],a_val)
+
+    def argDecoder(self, datatuple):
+            new_data=datatuple
+            if new_data[0]=="waterlevel":
+                self.waterlevel = int(new_data[1])
+                        
+                self.lookup_table = self.generate_LUT()
+
+            elif new_data[0]=="colorA":
+                self.colorA = (int(new_data[1][0]),int(new_data[1][1]),int(new_data[1][2]))
+                        
+                self.lookup_table = self.generate_LUT()
+            elif new_data[0]=="colorB":
+                self.colorB = (int(new_data[1][0]),int(new_data[1][1]),int(new_data[1][2]))
+
+                self.lookup_table = self.generate_LUT()
+            elif new_data[0]=="colorC":
+                self.colorC = (int(new_data[1][0]),int(new_data[1][1]),int(new_data[1][2]))
+
+                self.lookup_table = self.generate_LUT()
+            elif new_data[0]=="colorD":
+                self.colorD = (int(new_data[1][0]),int(new_data[1][1]),int(new_data[1][2]))
+                        
+                self.lookup_table = self.generate_LUT()
+
+            elif new_data[0]=="colorE":
+                self.colorE = (int(new_data[1][0]),int(new_data[1][1]),int(new_data[1][2]))
+                        
+                self.lookup_table = self.generate_LUT()
+            elif new_data[0]=="colorF":
+                self.colorF = (int(new_data[1][0]),int(new_data[1][1]),int(new_data[1][2]))
+                        
+                self.lookup_table = self.generate_LUT()
+            elif new_data[0]=="colorWater":
+                self.colorWater = (int(new_data[1][0]),int(new_data[1][1]),int(new_data[1][2]))
+
+                self.lookup_table = self.generate_LUT()
+            elif new_data[0]=="colorDeepWater":
+                self.colorWater = (int(new_data[1][0]),int(new_data[1][1]),int(new_data[1][2]))
+                        
+                self.lookup_table = self.generate_LUT()
+            elif new_data[0]=="arrcolorA":
+                self.colorA = (int(new_data[1][2]),int(new_data[1][1]),int(new_data[1][0]))
+                self.lookup_table = self.generate_LUT()
+        
+
+            elif new_data[0]=="arrcolorB":
+                self.colorB = (int(new_data[1][2]),int(new_data[1][1]),int(new_data[1][0]))
+                self.lookup_table = self.generate_LUT()
+            elif new_data[0]=="arrcolorC":
+                self.colorC = (int(new_data[1][2]),int(new_data[1][1]),int(new_data[1][0]))
+                self.lookup_table = self.generate_LUT()
+            elif new_data[0]=="arrcolorD":
+                self.colorD = (int(new_data[1][2]),int(new_data[1][1]),int(new_data[1][0]))
+                self.lookup_table = self.generate_LUT()
+
+            elif new_data[0]=="arrcolorE":
+                self.colorE = (int(new_data[1][2]),int(new_data[1][1]),int(new_data[1][0]))
+                self.lookup_table = self.generate_LUT()
+            elif new_data[0]=="arrcolorF":
+                self.colorF = (int(new_data[1][2]),int(new_data[1][1]),int(new_data[1][0]))
+                self.lookup_table = self.generate_LUT()
+            elif new_data[0]=="arrcolorWater":
+                self.colorWater = (int(new_data[1][2]),int(new_data[1][1]),int(new_data[1][0]))
+                self.lookup_table = self.generate_LUT()
+            elif new_data[0]=="arrcolorDeepWater":
+                self.colorDeepWater = (int(new_data[1][2]),int(new_data[1][1]),int(new_data[1][0]))
+                self.lookup_table = self.generate_LUT()                      
+
+            elif new_data[0]=="minShapeSize":
+                self.minShapeSize = int(new_data[1])  
+
+            elif new_data[0]=="mask_points":
+                self.border_mask = self.generate_new_mask(new_data[1])
+            elif new_data[0]=="xoff":
+                self.xoff=int(new_data[1])
+                print("Xoff set",self.xoff)
+            elif new_data[0]=="yoff":
+                self.yoff=int(new_data[1])
+                print("Yoff set",self.yoff)
+            elif new_data[0]=="newTrees":
+                if self.tree_state==True:
+                    self.tree_manager.generate_new_tree_pos(int(new_data[1]))  
+
+            elif new_data[0]=="color_correct":
+                print("performing color correct")
+                self.calculate_color_correct((int(new_data[1][0]),int(new_data[1][1]),int(new_data[1][2])))
+                    

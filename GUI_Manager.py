@@ -6,93 +6,71 @@ from tkinter import colorchooser
 from PIL import Image, ImageTk
 #class generates a tk inter gui
 import cv2
+
 class GUI_Manager:
     def __init__(self, manager):
         self.setting_manager = manager
-
         self.latest_color_img = 0
-
         self.newWindow_status = False
-
         self.selected_points = []
         
     def start_gui(self):
         self.window = tk.Tk()
         self.label = tk.Label(self.window, text="Sandbox GUI")
-
-
         self.label.grid(column=1,row=0)
         self.waterslider = tk.Scale(self.window, from_=0, to=255, command= self.waterSliderMove)
-        self.waterslider.set(self.setting_manager.get_settings()['waterlevel'])
+        self.waterslider.set(200)
         self.waterslider.grid(column=0,row=1)
         self.labelWater = tk.Label(self.window, text="Waterlevel")
         self.labelWater.grid(column=0,row=2)
-
-
-        self.shapeminslider = tk.Scale(self.window, from_=100, to=300, command= self.shapeSliderMove)
-        self.shapeminslider.set(self.setting_manager.get_settings()['minShapeSize']*100)
+        self.shapeminslider = tk.Scale(self.window, from_=0, to=500, command= self.shapeSliderMove)
+        self.shapeminslider.set(200)
         self.shapeminslider.grid(column=1,row=1)
-        self.labelShape = tk.Label(self.window, text="Shapesize")
+        self.labelShape = tk.Label(self.window, text="Zoom")
         self.labelShape.grid(column=1,row=2)
-
+        self.xsli = tk.Scale(self.window, from_=-500, to=500, command= self.xSliderMove)
+        self.xsli.set(0)
+        self.xsli.grid(column=4,row=1)
+        self.ysli = tk.Scale(self.window, from_=-500, to=500, command= self.ySliderMove)
+        self.ysli.set(0)
+        self.ysli.grid(column=5,row=1)
         self.refreshSlider = tk.Scale(self.window, from_=1, to=20, command= self.refreshSliderMove)
         self.shapeminslider.set(self.setting_manager.get_settings()['refreshRate'])
         self.refreshSlider.grid(column=2,row=1)
         self.labelRefresh = tk.Label(self.window, text="Refresh")
         self.labelRefresh.grid(column=2,row=2)
-
-
         self.treeSlide = tk.Scale(self.window, from_=1, to=20, command= self.treeSliderMove)
         self.treeSlide.grid(column=3,row=1)
         self.labelTree = tk.Label(self.window, text="Trees")
         self.labelTree.grid(column=3,row=2)
         self.label_remainder = tk.Label(self.window)
         self.label_remainder.grid(column=0,row=11)
-
-        self.color_corr_state = False
-        self.autoColorButton = tk.Button(self.window, text="Color Correct: False"+str(self.color_corr_state),command=self.col_corr)
-        self.autoColorButton.grid(column = 0,row=3 )
-
         self.standardButton = tk.Button(self.window, text="STANDARD VALUES (RESET)",command=self.load_standard_values)
         self.standardButton.grid(column = 0,row=4 )
-
         self.colorA =  self.bgr_array_color_hex(self.setting_manager.get_settings()['colorA'])
         self.labelA = tk.Button(self.window,text="Color A",bg=self.colorA, command=lambda: self.choose_Color("arrcolorA"))
         self.labelA.grid(column=3,row=4)
-
         self.colorB =  self.bgr_array_color_hex(self.setting_manager.get_settings()['colorB'])
         self.labelB = tk.Button(self.window,text="Color B",bg=self.colorB, command=lambda: self.choose_Color("arrcolorB"))
         self.labelB.grid(column=3,row=5)
-
         self.colorC =  self.bgr_array_color_hex(self.setting_manager.get_settings()['colorC'])
         self.labelC = tk.Button(self.window,text="Color C",bg=self.colorC, command=lambda: self.choose_Color("arrcolorC"))
         self.labelC.grid(column=3,row=6)
-
         self.colorD =  self.bgr_array_color_hex(self.setting_manager.get_settings()['colorD'])
         self.labelD = tk.Button(self.window,text="Color D",bg=self.colorD, command=lambda: self.choose_Color("arrcolorD"))
         self.labelD.grid(column=3,row=7)
-
         self.colorE =  self.bgr_array_color_hex(self.setting_manager.get_settings()['colorE'])
         self.labelE = tk.Button(self.window,text="Color E",bg=self.colorE, command=lambda: self.choose_Color("arrcolorE"))
         self.labelE.grid(column=3,row=8)
-
         self.colorF =  self.bgr_array_color_hex(self.setting_manager.get_settings()['colorF'])
         self.labelF = tk.Button(self.window,text="Color F",bg=self.colorF, command=lambda: self.choose_Color("arrcolorF"))
         self.labelF.grid(column=3,row=9)
-
         self.colorW =  self.bgr_array_color_hex(self.setting_manager.get_settings()['colorWater'])
         self.labelW = tk.Button(self.window,text="Color W",bg=self.colorW, command=lambda: self.choose_Color("arrcolorWater"))
         self.labelW.grid(column=3,row=10)
-
-
-        
         self.colorDW =  self.bgr_array_color_hex(self.setting_manager.get_settings()['colorDeepWater'])
         self.labelDW = tk.Button(self.window,text="Color DW",bg=self.colorDW, command=lambda: self.choose_Color("arrcolorDeepWater"))
         self.labelDW.grid(column=3,row=11)
-
-        self.masking_button = tk.Button(self.window, text="Masking", command= self.select_masking_points)
-        self.masking_button.grid(column=3,row=12)
-
 
         self.window.attributes('-topmost', 'true')
         self.window.mainloop()
@@ -101,49 +79,11 @@ class GUI_Manager:
         self.newWindow_status=False
         self.newWindow.destroy()
 
- 
-    def select_masking_points(self):
-        if self.newWindow_status == False:
-            x=1920/4
-            y=1080/4
-            dimension = (int(x),int(y))
-            small_img_array = cv2.resize(self.latest_color_img,dimension)
-            cv2.imwrite("tmp.png",small_img_array)
-            self.newWindow_status = True
-            self.newWindow = tk.Toplevel(self.window)
-            self.newWindow.title("New Window")
-            self.newWindow.protocol("WM_DELETE_WINDOW", self.on_close_new)
-            self.newWindow.geometry("600x600")
-            load = Image.open("tmp.png")
-            render = ImageTk.PhotoImage(load)
-        
+    def xSliderMove(self,arg):
+        self.setting_manager.alter_setting("xoff",arg)
 
-   
-            img = tk.Label(self.newWindow, image=render)
-            img.image = render
-            img.pack()
-            img.bind("<Button-1>", self.imgclick)
-            self.labelPA =tk.Label(self.newWindow, text="point not selected")
-            self.labelPA.pack()
-            self.labelPB =tk.Label(self.newWindow, text="point not selected")
-            self.labelPB.pack()
-
-    def imgclick(self,info):
-        x = info.x
-        y = info.y
-        if len(self.selected_points)==0:
-            self.selected_points.append([x*4,y*4])
-            self.labelPA.config(text=str(x*4)+":"+str(y*4))
-        elif len(self.selected_points)==1:
-            self.selected_points.append([x*4,y*4])
-            self.labelPB.config(text=str(x*4)+":"+str(y*4))
-            self.setting_manager.alter_setting("mask_points",self.selected_points)
-            self.selected_points=[]
-            self.newWindow_status=False
-            self.newWindow.destroy()
-
-
- 
+    def ySliderMove(self,arg):
+        self.setting_manager.alter_setting("yoff",arg)
 
     def waterSliderMove(self,arg):
         self.setting_manager.alter_setting("waterlevel",arg)
@@ -151,19 +91,13 @@ class GUI_Manager:
         self.label_remainder.config(text=str(val))
 
     def shapeSliderMove(self,arg):
-        self.setting_manager.alter_setting("minShapeSize",int(arg)/100)
+        self.setting_manager.alter_setting("minShapeSize",int(arg))
 
     def refreshSliderMove(self,arg):
         self.setting_manager.alter_setting("refreshRate",arg)
+
     def treeSliderMove(self,arg):
         self.setting_manager.alter_setting("newTrees",arg)
-
-    def col_corr(self):
-        print("color correct button press")
-        self.color_corr_state = not self.color_corr_state
-        self.setting_manager.change_col_corr(self.color_corr_state)
-        self.autoColorButton.config(text="Color Correct: "+str(self.color_corr_state))
-
 
     def array_color_hex(self,array):
         try:
@@ -176,6 +110,7 @@ class GUI_Manager:
             return '#%02x%02x%02x' % (array[2], array[1], array[0])
         except:
             return "#000000"
+
     #resets all values to standard values 
     def load_standard_values(self):
         self.setting_manager.write_standards()
@@ -183,7 +118,6 @@ class GUI_Manager:
         self.update_ui()
 
     def choose_Color(self,param):
- 
         # variable to store hexadecimal code of color
         try:
             color_code = colorchooser.askcolor(title ="Choose color")
