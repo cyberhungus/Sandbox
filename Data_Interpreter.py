@@ -18,11 +18,10 @@ from Object_Manager import Tree_Manager as tm
 
 #this class receives image data via a queue, iterates through the pixels, and changes their colour in accordance with height data 
 class Data_Interpreter(Thread):
-    def __init__(self,input_queue, output_queue,is_mock=False, has_trees = False):
+    def __init__(self,input_queue, output_queue, has_trees = False):
         self.input = input_queue
         self.output = output_queue
-        self.waterlevel = 4000
-        self.is_mock = is_mock
+        self.waterlevel = 30
 
         self.shapes =[]
 
@@ -46,12 +45,6 @@ class Data_Interpreter(Thread):
         self.colorG = (250,250,0)
         self.colorWater = (200,50,0)
         self.colorDeepWater = (250,50,0)
-        self.shapeThreshLow = (70,0,70)
-        self.shapeThreshHigh = (100,45,100)
-
-
-
-        self.shape_offset= 20
 
         filepath = os.getcwd()+"/assets/testfile.png"
         self.houseIMG = cv.imread(filepath,cv.IMREAD_COLOR)
@@ -71,16 +64,13 @@ class Data_Interpreter(Thread):
         self.lastMaskPoints = 0 
         self.standardmask = [[0,0],[1920,0],[0,1080],[1920,1080]]
 
-        self.xoff = 0
-        self.yoff=0
-
 
         self.realArucoSizeMM = 26.28
         self.focal_length = 1233.24
         self.markerSizePixel = 0 
         self.camera_height = 1 
 
-
+    #main function, checks for settings alteration, then takes new image data, analyses it, and sends it on to the Data_Visualizer 
     def run(self):
         while 1:
             if not self.input.empty():
@@ -90,66 +80,53 @@ class Data_Interpreter(Thread):
                     self.argDecoder(new_data)
                 #this section takes new image data and then runs the neccessary functions on that data 
                 else:
-                    #starttime = timeit.default_timer()
+                    starttime = timeit.default_timer()
                     
-                    self.output.put_nowait(("DEPTH_TEST",new_data[0]))
+                    
 
                     self.findmask(new_data[1])
                     print(self.maskpoints)
           
                     processed_data_depth = self.height_transform_lut(new_data[0])
-                  #  print(processed_data_depth.shape)
+
                     line_data_depth = self.draw_height_lines(new_data[0],processed_data_depth)
-                   # print(line_data_depth.shape)
+
                     full_img = self.process_aruco(new_data[1],line_data_depth)
-                   # print(full_img.shape)
+                   
                     self.output.put_nowait(("ANALYZED",self.applymask(full_img)))
-                   # print("Time for color convert algorithm :", timeit.default_timer() - starttime)
+                    print("Time for color convert algorithm :", timeit.default_timer() - starttime)
 
 
 
 
-
+    #Finds the masking points shown by the projector
+    #img= an np.array styled image - in this case the raw RGB photo
     def findmask(self, img):
-       # try:
             self.lastMaskPoints= self.maskpoints
             self.maskpoints = []
             arucofound = self.findArucoMarkers(img)
-           # print("Arucos found" , arucofound==True)
             # loop through all the markers and augment each one
             if arucofound:
-               # print("arucofound")
                 if len(arucofound[0])>=4:
                     for bbox, codeID in zip(arucofound[0], arucofound[1]):
                         if codeID in range(0,4):
                             center_calc_arr = []
                             for point in bbox[0]:
                                 center_calc_arr.append([int(point[0]),int(point[1])])
-                            #print("Found fiducial center for ID", id, ":", center_calc_arr,"MID",self.calc_middle(center_calc_arr))
                             sorted_points = self.sortpoints(center_calc_arr)
-                            length = sorted_points[1]-sorted_points[0]
-                            
-                            self.markerSizePixel  =  np.amax(length)
-                            print("Length is ", self.markerSizePixel )
-                            self.calculate_camera_height(self.markerSizePixel)
-
+                            length = sorted_points[1]-sorted_points[0]                   
                             mid = self.calc_middle(center_calc_arr)
                             self.maskpoints.append(mid)
-                #print("new midpoints", self.maskpoints)
                 self.maskpoints = self.sortpoints(self.maskpoints)
             else:
-                #print("NO MASK FOUND")
+
                 self.maskpoints = self.standardmask
 
-    def calculate_camera_height(self, object_size_pixel):
-        size = object_size_pixel
-        result = (self.realArucoSizeMM*1233.24)/size 
-        print("camera distance is ", result)
 
 
 
 
-    #tl,tr,bl,br
+    #Sorts points so they are usable in the Aruco-AR Function 
     def sortpoints(self,pts):
         try:
             pts = np.array(pts)
@@ -164,11 +141,12 @@ class Data_Interpreter(Thread):
         except Exception as ex:
             return self.sortpoints(self.lastMaskPoints)
 
+    #Places the generated image onto the area marked by arucos 
     def applymask(self, imgAug):
         img = np.ones((1080,1920,3),dtype=np.uint8)
         h, w, c = imgAug.shape
         pts1 = np.array(np.array(self.maskpoints))
-        print("applymask new points", pts1)
+       # print("applymask new points", pts1)
         pts2 = np.float32([[0,0], [w,0], [w,h], [0,h]])
         matrix, _ = cv.findHomography(pts1, pts2)
         imgout = cv.warpPerspective(imgAug, matrix, (img.shape[1], img.shape[0]))
@@ -176,56 +154,27 @@ class Data_Interpreter(Thread):
         imgout = img + imgout
         return imgout
 
-    def applymask2(self, img):
-        try:
-            x,y=[],[]
-            for point in self.maskpoints:
-                x.append(point[0])
-                y.append(point[1])
-            x,y, = np.array(x),np.array(y)
-            xMax = x.max()
-            xMin = x.min()
-            yMax = y.max()
-            yMin = y.min()
-        
-            toReturn=img[int(yMin):int(yMax),int(xMin):int(xMax)]
-           # print(toReturn.shape)
-            return toReturn
-        except Exception as ex:
-            
-            print("apply mask error", ex , "for maskpoints:" , self.maskpoints)
-            return img
-
+    #wraps the Aruco detection and placements functionalities 
     def process_aruco(self, img_rgb, img_depth):
-        #print(img_rgb.shape,"Depth: ",img_depth.shape)
         img = img_rgb.copy()
         new_img=img_depth
         arucofound = self.findArucoMarkers(img)
-        # loop through all the markers and augment each one
         if arucofound:
-            #print(arucofound,len(arucofound))
             if len(arucofound[0])!=0:
-               # print("len aruco not null")
                 for bbox, id in zip(arucofound[0], arucofound[1]):
                     if id == 10 :   
                         new_img = self.arucoAug(bbox, id, img_depth, self.houseIMG)
                 return new_img
             else:
-               # print("returning img")
                 return new_img
-                
         else:
-           # print("returning img")
             return new_img
     
 
+    #detects arucomarkers 
     def findArucoMarkers(self,img, markerSize = 4, totalMarkers=100, draw=False):         
         try:
-           # print("find ar markers")
             gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-          #  cv.imshow("test",gray)
-           # cv.waitKey(1)
-            #print("find aruco gray shape:",gray.shape)
             key = getattr(aruco, f'DICT_{markerSize}X{markerSize}_{totalMarkers}')
             arucoDict = aruco.Dictionary_get(key)
             arucoParam = aruco.DetectorParameters_create()
@@ -233,14 +182,13 @@ class Data_Interpreter(Thread):
             print(ids)
             if draw:
                 aruco.drawDetectedMarkers(img, bboxs)
-           # print("find aruco done ")
             return [bboxs, ids]
         except Exception as ex:
             print("aruco finder exception",ex)
             return []
 
 
-
+    #draws an image on the area marked by aruco 
     def arucoAug(self,bbox, id, img, imgAug, drawId = True):
         tl = bbox[0][0][0], bbox[0][0][1]
         tr = bbox[0][1][0], bbox[0][1][1]
@@ -255,17 +203,16 @@ class Data_Interpreter(Thread):
         imgout = img + imgout
         return imgout
 
-
+    #determines the middle of an aruco marker ( or any number of points)
+    #points = list of 2D vectors 
     def calc_middle(self, points):
         x = [p[0] for p in points]
         y = [p[1] for p in points]
         centroid = (int(sum(x) / len(points)),int( sum(y) / len(points)))
         return centroid
 
-    def package_for_display(self):
-        pass
         
-
+    #draws the height lines found in color image onto the height data 
     def draw_height_lines(self,data,data_lut):
         data = data.astype("uint8")
         try:
@@ -278,11 +225,12 @@ class Data_Interpreter(Thread):
             print("Canny Error",ex)
             return data
 
+    #generates an greyscale image to be analysed with Canny 
     def greyscale_for_height_lines(self, arr):
         output = cv.convertScaleAbs(arr,alpha=0.5)
         return output
 
-
+    #generates a Lookup Table 
     def generate_LUT(self):
         lookup_table = np.zeros((256,1,3),dtype=np.uint8)
         
@@ -330,12 +278,17 @@ class Data_Interpreter(Thread):
         newBlue = colorMin[0] + percentage * (colorMax[0]- colorMin[0]);
         return (newRed,newGreen,newBlue)
 
-    def height_transform_lut(self, data):    
+
+    #transforms the height data into a colour image by using a lookup table 
+    def height_transform_lut(self, data): 
+        data = cv.convertScaleAbs(data,alpha=0.07)
+        self.output.put_nowait(("DEPTH_TEST",data))
+
         data = Image.fromarray(data,"L").convert("RGB")
         data = np.array(data)
         return cv.LUT(data,self.lookup_table)
 
-
+    #places trees 
     def tree_placer(self,img, pos_list):
         rimg = Image.fromarray(img,"RGB").convert("RGBA")
         return_img = np.array(rimg)
@@ -423,7 +376,6 @@ class Data_Interpreter(Thread):
                 self.colorA = (int(new_data[1][2]),int(new_data[1][1]),int(new_data[1][0]))
                 self.lookup_table = self.generate_LUT()
         
-
             elif new_data[0]=="arrcolorB":
                 self.colorB = (int(new_data[1][2]),int(new_data[1][1]),int(new_data[1][0]))
                 self.lookup_table = self.generate_LUT()
@@ -447,22 +399,7 @@ class Data_Interpreter(Thread):
                 self.colorDeepWater = (int(new_data[1][2]),int(new_data[1][1]),int(new_data[1][0]))
                 self.lookup_table = self.generate_LUT()                      
 
-            elif new_data[0]=="minShapeSize":
-                self.minShapeSize = int(new_data[1])  
 
-            elif new_data[0]=="mask_points":
-                self.border_mask = self.generate_new_mask(new_data[1])
-            elif new_data[0]=="xoff":
-                self.xoff=int(new_data[1])
-                print("Xoff set",self.xoff)
-            elif new_data[0]=="yoff":
-                self.yoff=int(new_data[1])
-                print("Yoff set",self.yoff)
             elif new_data[0]=="newTrees":
                 if self.tree_state==True:
                     self.tree_manager.generate_new_tree_pos(int(new_data[1]))  
-
-            elif new_data[0]=="color_correct":
-                print("performing color correct")
-                self.calculate_color_correct((int(new_data[1][0]),int(new_data[1][1]),int(new_data[1][2])))
-                    

@@ -4,7 +4,7 @@ class Settings_Manager:
     def __init__(self,main_manager, filepath="config.json", load_standards = True ):
         self.filepath=filepath
         self.main_manager = main_manager
-        self.standard_dict = {"waterlevel":150,
+        self.standard_dict = {"waterlevel":70,
                          "colorA":(0,150,100,1),
                          "colorB":(150,240,190,1),
                          "colorC":(175,230,230,1),
@@ -13,10 +13,13 @@ class Settings_Manager:
                          "colorF":(150,200,255,1),
                          "colorWater":(200,50,0,1),
                          "colorDeepWater":(250,50,0,1),
-                         "shapeThreshLow":(70,0,70),
-                         "shapeThreshHigh":(100,45,100),
-                         "minShapeSize":200,
-                         "refreshRate":5
+                         "mainScreenHeight":2160,
+                         "mainScreenWidth":3840,
+                         "projectorWidth":1920,
+                         "projectorHeight":1080, 
+                         "markerSize":50,
+                         "displayMarkers":1,
+                         "refreshRate":1
                          }
         self.settings_dict = {"waterlevel":150,
                          "colorA":(0,50,0),
@@ -27,9 +30,12 @@ class Settings_Manager:
                          "colorF":(150,200,255),
                          "colorWater":(200,50,0),
                          "colorDeepWater":(250,50,0),
-                         "shapeThreshLow":(70,0,70),
-                         "shapeThreshHigh":(100,45,100),
-                         "minShapeSize":50,
+                         "mainScreenHeight":2160,
+                         "mainScreenWidth":3840,
+                         "projectorWidth":1920,
+                         "projectorHeight":1080, 
+                         "markerSize":100,
+                         "displayMarkers":1,
                          "refreshRate":1
                          }
         if load_standards==True:

@@ -23,19 +23,24 @@ class GUI_Manager:
         self.waterslider.grid(column=0,row=1)
         self.labelWater = tk.Label(self.window, text="Waterlevel")
         self.labelWater.grid(column=0,row=2)
-        self.shapeminslider = tk.Scale(self.window, from_=0, to=500, command= self.shapeSliderMove)
-        self.shapeminslider.set(200)
-        self.shapeminslider.grid(column=1,row=1)
-        self.labelShape = tk.Label(self.window, text="Zoom")
-        self.labelShape.grid(column=1,row=2)
-        self.xsli = tk.Scale(self.window, from_=-500, to=500, command= self.xSliderMove)
-        self.xsli.set(0)
-        self.xsli.grid(column=4,row=1)
-        self.ysli = tk.Scale(self.window, from_=-500, to=500, command= self.ySliderMove)
-        self.ysli.set(0)
-        self.ysli.grid(column=5,row=1)
+        self.markerSlider = tk.Scale(self.window, from_=50, to=250, command= self.markerSliderMove)
+        self.markerSlider.set(100)
+        self.markerSlider.grid(column=1,row=1)
+        self.labelMarkerSize = tk.Label(self.window, text="Marker Size")
+        self.labelMarkerSize.grid(column=0,row=3)
+
+        self.markerState = tk.BooleanVar()
+        markerOnButt = tk.Radiobutton(self.window, text="Markers On", variable=self.markerState, value=True,
+                  command=self.markerToggle)
+        markerOnButt.grid(column=5,row=0)
+
+        markerOffButt = tk.Radiobutton(self.window, text="Markers Off", variable=self.markerState, value=False,
+                  command=self.markerToggle)
+       
+        markerOffButt.grid(column=5, row=1)
+
+
         self.refreshSlider = tk.Scale(self.window, from_=1, to=20, command= self.refreshSliderMove)
-        self.shapeminslider.set(self.setting_manager.get_settings()['refreshRate'])
         self.refreshSlider.grid(column=2,row=1)
         self.labelRefresh = tk.Label(self.window, text="Refresh")
         self.labelRefresh.grid(column=2,row=2)
@@ -79,19 +84,18 @@ class GUI_Manager:
         self.newWindow_status=False
         self.newWindow.destroy()
 
-    def xSliderMove(self,arg):
-        self.setting_manager.alter_setting("xoff",arg)
-
-    def ySliderMove(self,arg):
-        self.setting_manager.alter_setting("yoff",arg)
-
     def waterSliderMove(self,arg):
         self.setting_manager.alter_setting("waterlevel",arg)
         val = (255-int(arg))/6
         self.label_remainder.config(text=str(val))
 
-    def shapeSliderMove(self,arg):
-        self.setting_manager.alter_setting("minShapeSize",int(arg))
+    def markerSliderMove(self,arg):
+        self.setting_manager.alter_setting("markerSize",arg)
+        self.labelMarkerSize.config(text="Marker Size: "+str(arg))
+
+    def markerToggle(self):
+        print("marker toggle", self.markerState.get())
+        self.setting_manager.alter_setting("displayMarkers",self.markerState.get())
 
     def refreshSliderMove(self,arg):
         self.setting_manager.alter_setting("refreshRate",arg)
@@ -128,9 +132,7 @@ class GUI_Manager:
 
     def update_ui(self):
         self.waterslider.set(self.setting_manager.get_settings()['waterlevel'])
-        self.shapeminslider.set(self.setting_manager.get_settings()['minShapeSize'])
-        self.shapeminslider.set(self.setting_manager.get_settings()['refreshRate'])
-        self.shapeminslider.set(self.setting_manager.get_settings()['refreshRate'])
+
         self.colorA =  self.bgr_array_color_hex(self.setting_manager.get_settings()['colorA'])
         self.labelA.config(bg=self.colorA)
         self.colorB =  self.bgr_array_color_hex(self.setting_manager.get_settings()['colorB'])

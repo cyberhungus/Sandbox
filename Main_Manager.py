@@ -12,10 +12,11 @@ class Main_Manager:
     def __init__(self):
         self.Raw_Queue = mp.Queue()
         self.Interpreted_Queue = mp.Queue()
-        self.Data_Getter = dg.Data_Getter(1,self.Raw_Queue,self.Interpreted_Queue,self)
         self.Settings_Manager = sm.Settings_Manager(self)
+        self.Data_Getter = dg.Data_Getter(1,self.Raw_Queue,self.Interpreted_Queue,self)
+        
 
-        self.Data_Interpreter = di.Data_Interpreter(self.Raw_Queue, self.Interpreted_Queue, is_mock=True)
+        self.Data_Interpreter = di.Data_Interpreter(self.Raw_Queue, self.Interpreted_Queue)
         self.Interpret_Process = mp.Process(target=self.Data_Interpreter.run)
         self.Interpret_Process.start()
         self.Data_Visualizer = dv.Data_Visualizer(self.Interpreted_Queue)
@@ -33,13 +34,17 @@ class Main_Manager:
         for item in settings_dict.items():
             self.Raw_Queue.put_nowait((item[0],item[1]))
         self.Data_Getter.update_refresh_rate(settings_dict['refreshRate'])
-        
+        self.Interpreted_Queue.put_nowait(("SHOW_MARKERS",settings_dict['displayMarkers']))
+        self.Interpreted_Queue.put_nowait(("MARKER_SIZE",settings_dict['markerSize']))
+
     #turns the color correction function on or off 
     def toggle_color_correct(self, state):
         self.Data_Getter.toggle_color_correct(state)
 
     def register_latest_image(self, img):
         self.gui.register_latest_image(img)
+
+
 
 if __name__ == '__main__':
 

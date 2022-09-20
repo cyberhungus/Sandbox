@@ -10,7 +10,7 @@ class Data_Visualizer:
         self.current_image_rgb_raw = 0 
         self.depth_control = 0
         self.markerMode = placemarkers
-        self.markersize = 150
+        self.markersize = 75
         self.ar0 = cv2.imread("ar0.png",cv2.IMREAD_COLOR)
         self.ar0 = cv2.resize(self.ar0,(self.markersize,self.markersize))
         self.ar1 = cv2.imread("ar1.png",cv2.IMREAD_COLOR)
@@ -19,6 +19,9 @@ class Data_Visualizer:
         self.ar2 = cv2.resize(self.ar2,(self.markersize,self.markersize))
         self.ar3 = cv2.imread("ar3.png",cv2.IMREAD_COLOR)
         self.ar3 = cv2.resize(self.ar3,(self.markersize,self.markersize))
+
+        self.output_width=1600
+        self.output_height=900
 
     def visualizer_runner(self):
         while 1:
@@ -35,6 +38,19 @@ class Data_Visualizer:
 
                 elif current_data[0]=="DEPTH_TEST":
                     self.depth_control = current_data[1]
+                elif current_data[0]=="SHOW_MARKERS":
+                    self.markerMode = bool(current_data[1])
+                elif current_data[0]=="MARKER_SIZE":
+                    self.markersize=int(current_data[1])
+                    self.ar0 = cv2.imread("ar0.png",cv2.IMREAD_COLOR)
+                    self.ar0 = cv2.resize(self.ar0,(self.markersize,self.markersize))
+                    self.ar1 = cv2.imread("ar1.png",cv2.IMREAD_COLOR)
+                    self.ar1 = cv2.resize(self.ar1,(self.markersize,self.markersize))
+                    self.ar2 = cv2.imread("ar2.png",cv2.IMREAD_COLOR)
+                    self.ar2 = cv2.resize(self.ar2,(self.markersize,self.markersize))
+                    self.ar3 = cv2.imread("ar3.png",cv2.IMREAD_COLOR)
+                    self.ar3 = cv2.resize(self.ar3,(self.markersize,self.markersize))
+
                 try:
                     cv2.namedWindow("OUTPUT_FULLSCREEN", cv2.WND_PROP_FULLSCREEN)
                     cv2.moveWindow("OUTPUT_FULLSCREEN", 3840,0)
@@ -58,17 +74,21 @@ class Data_Visualizer:
         return self.current_image_full
 
     def place_ar_corners(self, image):
+      #  print("place ar corners image",image)
         try:
-            image = cv2.resize(image,(1920,1080))
+            image[np.where((image==[1,1,1]).all(axis=2))] = [255,255,255]
+            image = cv2.resize(image,(self.output_width,self.output_height))
+            #print("normal place corers")
             w,h,c = image.shape
-            image[0:self.markersize,0:self.markersize] = self.ar0
-            image[w-self.markersize:w,0:self.markersize] = self.ar1
-            image[0:self.markersize, h-self.markersize:h] = self.ar2
-            image[w-self.markersize:w,h-self.markersize:h] = self.ar3
+            image[0:self.markersize,0:self.markersize] = self.increase_brightness(self.ar0,value=90)
+            image[w-self.markersize:w,0:self.markersize] = self.increase_brightness(self.ar1,value=90)
+            image[0:self.markersize, h-self.markersize:h] = self.increase_brightness(self.ar2,value=90)
+            image[w-self.markersize:w,h-self.markersize:h] = self.increase_brightness(self.ar3,value=90)
             return image 
         except Exception as ex:
-           
-            image = np.ones((1080,1920,3),dtype=np.uint8)*255
+           # print("alternative ar corners")
+            image = np.zeros((self.output_width,self.output_height,3),dtype=np.uint8)
+            image[np.where((image==[0,0,0]).all(axis=2))] = [255,255,255]
             w,h,c = image.shape
             image[0:self.markersize,0:self.markersize] = self.ar0
             image[w-self.markersize:w,0:self.markersize] = self.ar1
@@ -79,4 +99,14 @@ class Data_Visualizer:
 
                 
 
-                
+    def increase_brightness(self,img, value=30):
+        hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+        h, s, v = cv2.split(hsv)
+
+        lim = 255 - value
+        v[v > lim] = 255
+        v[v <= lim] += value
+
+        final_hsv = cv2.merge((h, s, v))
+        img = cv2.cvtColor(final_hsv, cv2.COLOR_HSV2BGR)
+        return img
