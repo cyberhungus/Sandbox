@@ -19,7 +19,8 @@ class Settings_Manager:
                          "projectorHeight":1080, 
                          "markerSize":50,
                          "displayMarkers":1,
-                         "refreshRate":1
+                         "refreshRate":1,
+                         "addBrightness":90
                          }
         self.settings_dict = {"waterlevel":150,
                          "colorA":(0,50,0),
@@ -36,12 +37,16 @@ class Settings_Manager:
                          "projectorHeight":1080, 
                          "markerSize":100,
                          "displayMarkers":1,
-                         "refreshRate":1
+                         "refreshRate":1,
+                         "addBrightness":90
                          }
         if load_standards==True:
            self.write_standards()
         self.read()
 
+    #allows other components/classes to alter settings
+    #parameter=parameter name (see dictionary above)
+    #value=what value to set for that parameter 
     def alter_setting(self,parameter, value):
         if not parameter.__contains__("color"): 
             self.settings_dict[parameter] = value 
@@ -52,7 +57,7 @@ class Settings_Manager:
             self.main_manager.update_settings_hook(self.settings_dict)
             self.write()
 
-
+    #gathers the settings from a file 
     def read(self):
         try:
             config_file = open(self.filepath)
@@ -76,18 +81,18 @@ class Settings_Manager:
             print("Error in Settings Manager",ex )
             return 0 
 
+    #writes settings to file 
     def write(self):
 
         with open(self.filepath, "w") as outfile:
             json.dump(self.settings_dict, outfile)
 
+    #writes standard settings to file (reset )
     def write_standards(self):
         with open(self.filepath, "w") as outfile:
             json.dump(self.standard_dict, outfile)
 
-
+    #returns the setting dictionary 
     def get_settings(self):
         return self.settings_dict
 
-    def change_col_corr(self, state):
-        self.main_manager.toggle_color_correct(state)

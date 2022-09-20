@@ -19,7 +19,7 @@ class GUI_Manager:
         self.label = tk.Label(self.window, text="Sandbox GUI")
         self.label.grid(column=1,row=0)
         self.waterslider = tk.Scale(self.window, from_=0, to=255, command= self.waterSliderMove)
-        self.waterslider.set(200)
+        self.waterslider.set(50)
         self.waterslider.grid(column=0,row=1)
         self.labelWater = tk.Label(self.window, text="Waterlevel")
         self.labelWater.grid(column=0,row=2)
@@ -27,17 +27,22 @@ class GUI_Manager:
         self.markerSlider.set(100)
         self.markerSlider.grid(column=1,row=1)
         self.labelMarkerSize = tk.Label(self.window, text="Marker Size")
-        self.labelMarkerSize.grid(column=0,row=3)
+        self.labelMarkerSize.grid(column=1,row=3)
 
         self.markerState = tk.BooleanVar()
-        markerOnButt = tk.Radiobutton(self.window, text="Markers On", variable=self.markerState, value=True,
-                  command=self.markerToggle)
-        markerOnButt.grid(column=5,row=0)
+        markerOnButt = tk.Radiobutton(self.window, text="Markers On", variable=self.markerState, value=True, command=self.markerToggle)
+        markerOnButt.grid(column=0,row=3)
 
-        markerOffButt = tk.Radiobutton(self.window, text="Markers Off", variable=self.markerState, value=False,
-                  command=self.markerToggle)
+        markerOffButt = tk.Radiobutton(self.window, text="Markers Off", variable=self.markerState, value=False, command=self.markerToggle)
        
-        markerOffButt.grid(column=5, row=1)
+        markerOffButt.grid(column=1, row=3)
+
+
+        self.brightSlider = tk.Scale(self.window, from_=50, to=250, command= self.brightSliderMove)
+        self.brightSlider.set(90)
+        self.brightSlider.grid(column=2,row=1)
+        self.brightMarkerSize = tk.Label(self.window, text="BrightnessAdd")
+        self.brightMarkerSize.grid(column=2,row=3)
 
 
         self.refreshSlider = tk.Scale(self.window, from_=1, to=20, command= self.refreshSliderMove)
@@ -48,10 +53,9 @@ class GUI_Manager:
         self.treeSlide.grid(column=3,row=1)
         self.labelTree = tk.Label(self.window, text="Trees")
         self.labelTree.grid(column=3,row=2)
-        self.label_remainder = tk.Label(self.window)
-        self.label_remainder.grid(column=0,row=11)
+
         self.standardButton = tk.Button(self.window, text="STANDARD VALUES (RESET)",command=self.load_standard_values)
-        self.standardButton.grid(column = 0,row=4 )
+        self.standardButton.grid(column = 0,row=11 )
         self.colorA =  self.bgr_array_color_hex(self.setting_manager.get_settings()['colorA'])
         self.labelA = tk.Button(self.window,text="Color A",bg=self.colorA, command=lambda: self.choose_Color("arrcolorA"))
         self.labelA.grid(column=3,row=4)
@@ -84,10 +88,13 @@ class GUI_Manager:
         self.newWindow_status=False
         self.newWindow.destroy()
 
+
+    def brightSliderMove(self,arg):
+        self.setting_manager.alter_setting("addBrightness",arg)
+
     def waterSliderMove(self,arg):
         self.setting_manager.alter_setting("waterlevel",arg)
-        val = (255-int(arg))/6
-        self.label_remainder.config(text=str(val))
+
 
     def markerSliderMove(self,arg):
         self.setting_manager.alter_setting("markerSize",arg)
@@ -121,6 +128,7 @@ class GUI_Manager:
         self.setting_manager.read()
         self.update_ui()
 
+    #displays the color picker 
     def choose_Color(self,param):
         # variable to store hexadecimal code of color
         try:
@@ -130,6 +138,7 @@ class GUI_Manager:
         except Exception as ex:
             print("Color chooser closed without selection or error:",ex)
 
+    #hook to update the ui 
     def update_ui(self):
         self.waterslider.set(self.setting_manager.get_settings()['waterlevel'])
 
@@ -148,6 +157,3 @@ class GUI_Manager:
         self.colorW =  self.bgr_array_color_hex(self.setting_manager.get_settings()['colorWater'])
         self.labelW.config(bg=self.colorW)
 
-    def register_latest_image(self,img):
-        self.latest_color_img = img
-        

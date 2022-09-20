@@ -46,8 +46,8 @@ class Data_Interpreter(Thread):
         self.colorWater = (200,50,0)
         self.colorDeepWater = (250,50,0)
 
-        filepath = os.getcwd()+"/assets/testfile.png"
-        self.houseIMG = cv.imread(filepath,cv.IMREAD_COLOR)
+        filepath = os.getcwd()+"/assets/newTopoItem.png"
+        self.houseIMG = cv.imread(filepath,cv.IMREAD_UNCHANGED)
 
 
         filepath = os.getcwd()+"/assets/tree.png"

@@ -36,6 +36,7 @@ class Main_Manager:
         self.Data_Getter.update_refresh_rate(settings_dict['refreshRate'])
         self.Interpreted_Queue.put_nowait(("SHOW_MARKERS",settings_dict['displayMarkers']))
         self.Interpreted_Queue.put_nowait(("MARKER_SIZE",settings_dict['markerSize']))
+        self.Interpreted_Queue.put_nowait(("BRIGHTNESS",settings_dict['addBrightness']))
 
     #turns the color correction function on or off 
     def toggle_color_correct(self, state):
