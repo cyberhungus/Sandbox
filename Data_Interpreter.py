@@ -18,7 +18,11 @@ from Object_Manager import Tree_Manager as tm
 
 #this class receives image data via a queue, iterates through the pixels, and changes their colour in accordance with height data 
 class Data_Interpreter(Thread):
-    def __init__(self,input_queue, output_queue, has_trees = False):
+    def __init__(self,input_queue, output_queue, pipe, has_trees = False):
+
+        self.queue = pipe 
+       
+
         self.input = input_queue
         self.output = output_queue
         self.waterlevel = 30
@@ -47,7 +51,10 @@ class Data_Interpreter(Thread):
         self.colorDeepWater = (250,50,0)
 
         filepath = os.getcwd()+"/assets/newTopoItem.png"
-        self.houseIMG = cv.imread(filepath,cv.IMREAD_UNCHANGED)
+        self.houseIMG = cv.imread(filepath,cv.IMREAD_COLOR)
+
+        filepath = os.getcwd()+"/assets/garten.png"
+        self.gardenIMG = cv.imread(filepath,cv.IMREAD_COLOR)
 
 
         filepath = os.getcwd()+"/assets/tree.png"
@@ -64,11 +71,15 @@ class Data_Interpreter(Thread):
         self.lastMaskPoints = 0 
         self.standardmask = [[0,0],[1920,0],[0,1080],[1920,1080]]
 
+        self.depthBrightness = 0.01
+
 
         self.realArucoSizeMM = 26.28
         self.focal_length = 1233.24
         self.markerSizePixel = 0 
         self.camera_height = 1 
+
+        self.heightLineMode = True
 
     #main function, checks for settings alteration, then takes new image data, analyses it, and sends it on to the Data_Visualizer 
     def run(self):
@@ -85,18 +96,57 @@ class Data_Interpreter(Thread):
                     
 
                     self.findmask(new_data[1])
-                    print(self.maskpoints)
+
+                   # print(self.maskpoints)
+                    cv.imshow("test",cv.resize(self.four_point_transform(new_data[1],self.maskpoints),(500,500)))
+                    cv.waitKey(1)
+
+
           
                     processed_data_depth = self.height_transform_lut(new_data[0])
+                    if self.heightLineMode==True:
+                        processed_data_depth = self.draw_height_lines(processed_data_depth)
 
-                    line_data_depth = self.draw_height_lines(new_data[0],processed_data_depth)
-
-                    full_img = self.process_aruco(new_data[1],line_data_depth)
+                    full_img = self.process_aruco(new_data[1],processed_data_depth)
+                   # full_img = self.process_aruco(new_data[1], processed_data_depth)
                    
                     self.output.put_nowait(("ANALYZED",self.applymask(full_img)))
                     print("Time for color convert algorithm :", timeit.default_timer() - starttime)
 
 
+
+    def four_point_transform(self, image, pts):
+        # obtain a consistent order of the points and unpack them
+        # individually
+        rect = self.sortpoints(pts)
+        (tl, tr, br, bl) = rect
+        # compute the width of the new image, which will be the
+        # maximum distance between bottom-right and bottom-left
+        # x-coordiates or the top-right and top-left x-coordinates
+        widthA = np.sqrt(((br[0] - bl[0]) ** 2) + ((br[1] - bl[1]) ** 2))
+        widthB = np.sqrt(((tr[0] - tl[0]) ** 2) + ((tr[1] - tl[1]) ** 2))
+        maxWidth = max(int(widthA), int(widthB))
+        # compute the height of the new image, which will be the
+        # maximum distance between the top-right and bottom-right
+        # y-coordinates or the top-left and bottom-left y-coordinates
+        heightA = np.sqrt(((tr[0] - br[0]) ** 2) + ((tr[1] - br[1]) ** 2))
+        heightB = np.sqrt(((tl[0] - bl[0]) ** 2) + ((tl[1] - bl[1]) ** 2))
+        maxHeight = max(int(heightA), int(heightB))
+        # now that we have the dimensions of the new image, construct
+        # the set of destination points to obtain a "birds eye view",
+        # (i.e. top-down view) of the image, again specifying points
+        # in the top-left, top-right, bottom-right, and bottom-left
+        # order
+        dst = np.array([
+	        [0, 0],
+	        [maxWidth - 1, 0],
+	        [maxWidth - 1, maxHeight - 1],
+	        [0, maxHeight - 1]], dtype = "float32")
+        # compute the perspective transform matrix and then apply it
+        M = cv.getPerspectiveTransform(rect, dst)
+        warped = cv.warpPerspective(image, M, (maxWidth, maxHeight))
+        # return the warped image
+        return warped
 
 
     #Finds the masking points shown by the projector
@@ -162,8 +212,15 @@ class Data_Interpreter(Thread):
         if arucofound:
             if len(arucofound[0])!=0:
                 for bbox, id in zip(arucofound[0], arucofound[1]):
-                    if id == 10 :   
-                        new_img = self.arucoAug(bbox, id, img_depth, self.houseIMG)
+
+                    if id not in range(0,4):
+                        print("Proces Aruco" , bbox,id)
+                        if id == 10 :   
+                            new_img = self.arucoAug(bbox, new_img, self.houseIMG, expandSize=0)
+                        elif id == 9:
+                            new_img = self.arucoAug(bbox, new_img, self.gardenIMG, expandSize= 40)
+
+
                 return new_img
             else:
                 return new_img
@@ -179,7 +236,9 @@ class Data_Interpreter(Thread):
             arucoDict = aruco.Dictionary_get(key)
             arucoParam = aruco.DetectorParameters_create()
             bboxs, ids, rejected = aruco.detectMarkers(gray, arucoDict, parameters = arucoParam)
-            print(ids)
+           # print("SENDING MARKERS", ids)
+            self.queue.put_nowait(("FOUNDMARKERS",ids))
+
             if draw:
                 aruco.drawDetectedMarkers(img, bboxs)
             return [bboxs, ids]
@@ -189,11 +248,11 @@ class Data_Interpreter(Thread):
 
 
     #draws an image on the area marked by aruco 
-    def arucoAug(self,bbox, id, img, imgAug, drawId = True):
-        tl = bbox[0][0][0], bbox[0][0][1]
-        tr = bbox[0][1][0], bbox[0][1][1]
-        br = bbox[0][2][0], bbox[0][2][1]
-        bl = bbox[0][3][0], bbox[0][3][1]
+    def arucoAug(self,bbox, img, imgAug, expandSize = 0):
+        tl = bbox[0][0][0]-expandSize, bbox[0][0][1]-expandSize
+        tr = bbox[0][1][0]+expandSize, bbox[0][1][1]-expandSize
+        br = bbox[0][2][0]+expandSize, bbox[0][2][1]+expandSize
+        bl = bbox[0][3][0]-expandSize, bbox[0][3][1]+expandSize
         h, w, c = imgAug.shape
         pts1 = np.array([tl, tr, br, bl])
         pts2 = np.float32([[0,0], [w,0], [w,h], [0,h]])
@@ -203,47 +262,66 @@ class Data_Interpreter(Thread):
         imgout = img + imgout
         return imgout
 
-    #determines the middle of an aruco marker ( or any number of points)
-    #points = list of 2D vectors 
     def calc_middle(self, points):
-        x = [p[0] for p in points]
-        y = [p[1] for p in points]
-        centroid = (int(sum(x) / len(points)),int( sum(y) / len(points)))
-        return centroid
-
+        """Determines the middle of either an aruco marker, or any number of points.
+        :param list points: The points from which the middle shall be calculated.
+        :return: The average of the points passed.
+        :rtype: tuple
         
-    #draws the height lines found in color image onto the height data 
-    def draw_height_lines(self,data,data_lut):
-        data = data.astype("uint8")
+        """
+
+        try:
+            x = [p[0] for p in points]
+            y = [p[1] for p in points]
+            centroid = (int(sum(x) / len(points)),int( sum(y) / len(points)))
+            return centroid
+        except:
+                tl = points[0][0][0], points[0][0][1]
+                tr = points[0][1][0], points[0][1][1]
+                br = points[0][2][0], points[0][2][1]
+                bl = points[0][3][0], points[0][3][1]
+                points = [tl,tr,br,bl]
+                x = [p[0] for p in points]
+                y = [p[1] for p in points]
+                centroid = (int(sum(x) / len(points)),int( sum(y) / len(points)))
+                return centroid
+
+    def draw_height_lines(self,data_lut):
+        """Draws height lines onto the height data.
+        :param np.array data_lut: Height data 
+        :return: The array with drawn on height lines generated by canny. 
+        :rtype: np.array
+        """
         try:
 
-            canny = cv.Canny(data, 0,255)
+            canny = cv.Canny(data_lut, 0,255)
             line_pixels = canny[:,:]>0
             data_lut[line_pixels]=self.lineBrown
             return data_lut
         except Exception as ex:
             print("Canny Error",ex)
-            return data
+            return data_lut
 
-    #generates an greyscale image to be analysed with Canny 
+
     def greyscale_for_height_lines(self, arr):
+        """Returns an greyscale image of an RGB Image. This greyscale image is to be analysed with Canny. """
         output = cv.convertScaleAbs(arr,alpha=0.5)
         return output
 
     #generates a Lookup Table 
     def generate_LUT(self):
+        """Generates a lookup table based on chosen colors and the chose value of self.waterlevel.
+           Calls make_gradient_color.
+           Lookup table is used to transform height data. 
+        """
         lookup_table = np.zeros((256,1,3),dtype=np.uint8)
-        
         color_table=[]
         remainder = (255-self.waterlevel)/6
         for num in range(256):
             if num in range(0,int(self.waterlevel/2)):
-                color_table.append(self.colorG)   
-                
+                color_table.append(self.colorG)        
             elif num in range(int(self.waterlevel/2),self.waterlevel):
                 color_table.append(self.make_gradient_color(num, int(self.waterlevel/2),int(self.waterlevel),self.colorG, self.colorF))
-                
-                         
             elif num in range(int(self.waterlevel),int(self.waterlevel+remainder)):
                 color_table.append(self.make_gradient_color(num, int(self.waterlevel),int(self.waterlevel+remainder),self.colorF,self.colorE)) 
             elif num in range(int(self.waterlevel+remainder),int(self.waterlevel+remainder*2)):
@@ -268,7 +346,10 @@ class Data_Interpreter(Thread):
             lookup_table[num,0,2]=color_table[num][2]
         return lookup_table
 
+
+    
     def make_gradient_color(self,value,rangeMin,rangeMax, colorMin, colorMax):
+        """Generates gradient colors between two threshold values."""
         scale = rangeMax-rangeMin
         distance = value-rangeMin
         percentage = 100 * float(distance)/float(scale)
@@ -279,9 +360,10 @@ class Data_Interpreter(Thread):
         return (newRed,newGreen,newBlue)
 
 
-    #transforms the height data into a colour image by using a lookup table 
+
     def height_transform_lut(self, data): 
-        data = cv.convertScaleAbs(data,alpha=0.07)
+        """Transforms the height data from a Data_Getter Instance into a colour image by using a lookup table."""
+        data = cv.convertScaleAbs(data,alpha=self.depthBrightness)
         self.output.put_nowait(("DEPTH_TEST",data))
 
         data = Image.fromarray(data,"L").convert("RGB")
@@ -330,14 +412,26 @@ class Data_Interpreter(Thread):
 
 
     def rgba_help(self, color, a_val):
+        """Adds an Alpha Channel to an RGB-Color"""
         return (color[0],color[1],color[2],a_val)
 
     def argDecoder(self, datatuple):
+            """The arg decoder is a multiprocessing communication helper.
+               The Data_Interpreter receives all new data as a tuple via a queue.
+               If the first element of said tuple is a string, the arg decoder changes parameters
+               of the instance of this class. 
+            """
             new_data=datatuple
             if new_data[0]=="waterlevel":
                 self.waterlevel = int(new_data[1])
                         
                 self.lookup_table = self.generate_LUT()
+
+            elif new_data[0]=="depthBrightness":
+                self.depthBrightness = int(new_data[1])/100
+
+            elif new_data[0]=="heightlineState":
+                self.heightLineMode = bool(new_data[1])
 
             elif new_data[0]=="colorA":
                 self.colorA = (int(new_data[1][0]),int(new_data[1][1]),int(new_data[1][2]))

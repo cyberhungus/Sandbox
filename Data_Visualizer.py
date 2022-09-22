@@ -10,7 +10,7 @@ class Data_Visualizer:
         self.current_image_rgb_raw = 0 
         self.depth_control = 0
         self.markerMode = placemarkers
-        self.markersize = 75
+        self.markersize = 100
         self.ar0 = cv2.imread("ar0.png",cv2.IMREAD_COLOR)
         self.ar0 = cv2.resize(self.ar0,(self.markersize,self.markersize))
         self.ar1 = cv2.imread("ar1.png",cv2.IMREAD_COLOR)
@@ -21,7 +21,7 @@ class Data_Visualizer:
         self.ar3 = cv2.resize(self.ar3,(self.markersize,self.markersize))
         self.output_width=1920
         self.output_height=1080
-        self.brightness_add = 90 
+        self.brightness_add = 100
 
     #the main function of the Data_Getter 
     def visualizer_runner(self):
@@ -49,8 +49,8 @@ class Data_Visualizer:
                     self.ar2 = cv2.resize(self.ar2,(self.markersize,self.markersize))
                     self.ar3 = cv2.imread("ar3.png",cv2.IMREAD_COLOR)
                     self.ar3 = cv2.resize(self.ar3,(self.markersize,self.markersize))
-                elif current_data[0]=="MARKER_SIZE":
-                    self.markersize=int(current_data[1])
+                elif current_data[0]=="BRIGHTNESS":
+                    self.brightness_add = int(current_data[1])
                 try:
                     cv2.namedWindow("OUTPUT_FULLSCREEN", cv2.WND_PROP_FULLSCREEN)
                     cv2.moveWindow("OUTPUT_FULLSCREEN", 3840,0)
@@ -80,6 +80,7 @@ class Data_Visualizer:
             image[w-self.markersize:w,0:self.markersize] = self.increase_brightness(self.ar1,value=self.brightness_add)
             image[0:self.markersize, h-self.markersize:h] = self.increase_brightness(self.ar2,value=self.brightness_add)
             image[w-self.markersize:w,h-self.markersize:h] = self.increase_brightness(self.ar3,value=self.brightness_add)
+            self.current_image_full = np.zeros((1920,1080,3),dtype=np.uint8)
             return image 
         except Exception as ex:
             image = np.zeros((self.output_width,self.output_height,3),dtype=np.uint8)

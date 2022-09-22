@@ -76,7 +76,7 @@ class Data_Getter:
                         self.output.put_nowait(("color_correct",capture_color_reference))
                     #sends depth and color data to visualizer for analysis 
                     self.output.put_nowait((depth_data,color_data))
-                    self.manager.register_latest_image(color_data)
+
                 except Exception as ex:
                     print("exception in data getter",ex)
 

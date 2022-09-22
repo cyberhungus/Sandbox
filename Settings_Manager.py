@@ -83,9 +83,11 @@ class Settings_Manager:
 
     #writes settings to file 
     def write(self):
-
-        with open(self.filepath, "w") as outfile:
-            json.dump(self.settings_dict, outfile)
+        try:
+            with open(self.filepath, "w") as outfile:
+                json.dump(self.settings_dict, outfile)
+        except:
+            print("FILEWRITE FAIL ")
 
     #writes standard settings to file (reset )
     def write_standards(self):

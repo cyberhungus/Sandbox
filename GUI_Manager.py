@@ -8,11 +8,12 @@ from PIL import Image, ImageTk
 import cv2
 
 class GUI_Manager:
-    def __init__(self, manager):
+    def __init__(self, manager, pipe):
         self.setting_manager = manager
         self.latest_color_img = 0
         self.newWindow_status = False
         self.selected_points = []
+        self.queue = pipe 
         
     def start_gui(self):
         self.window = tk.Tk()
@@ -30,20 +31,29 @@ class GUI_Manager:
         self.labelMarkerSize.grid(column=1,row=3)
 
         self.markerState = tk.BooleanVar()
-        markerOnButt = tk.Radiobutton(self.window, text="Markers On", variable=self.markerState, value=True, command=self.markerToggle)
-        markerOnButt.grid(column=0,row=3)
+        self.markerOnButt = tk.Radiobutton(self.window, text="Markers On", variable=self.markerState, value=True, command=self.markerToggle)
+        self.markerOnButt.grid(column=0,row=3)
+        self.markerOffButt = tk.Radiobutton(self.window, text="Markers Off", variable=self.markerState, value=False, command=self.markerToggle)
+        self.markerOffButt.grid(column=1, row=3)
 
-        markerOffButt = tk.Radiobutton(self.window, text="Markers Off", variable=self.markerState, value=False, command=self.markerToggle)
-       
-        markerOffButt.grid(column=1, row=3)
+        self.heightlineState = tk.BooleanVar()
+        self.heightlineOnButt = tk.Radiobutton(self.window, text="Heightlines On", variable=self.heightlineState, value=True, command=self.heightlineToggle)
+        self.heightlineOnButt.grid(column=0,row=5)
+        self.heightlineOffButt = tk.Radiobutton(self.window, text="Heightlines Off", variable=self.heightlineState, value=False, command=self.heightlineToggle)
+        self.heightlineOffButt.grid(column=1, row=5)
 
+        self.brightSlider = tk.Scale(self.window, from_=0, to=250, command= self.brightSliderMove)
+        self.brightSlider.set(100)
+        self.brightSlider.grid(column=6,row=1)
+        self.brightMarkerSize = tk.Label(self.window, text="Marker Bright.")
+        self.brightMarkerSize.grid(column=6,row=3)
 
-        self.brightSlider = tk.Scale(self.window, from_=50, to=250, command= self.brightSliderMove)
-        self.brightSlider.set(90)
-        self.brightSlider.grid(column=2,row=1)
-        self.brightMarkerSize = tk.Label(self.window, text="BrightnessAdd")
-        self.brightMarkerSize.grid(column=2,row=3)
-
+        
+        self.depthBrightSlider = tk.Scale(self.window, from_=0, to=10, command= self.depthBrightSliderMove)
+        self.depthBrightSlider.set(3)
+        self.depthBrightSlider.grid(column=7,row=1)
+        self.depthBrightMarkerSize = tk.Label(self.window, text="Depth Alpha")
+        self.depthBrightMarkerSize.grid(column=7,row=3)
 
         self.refreshSlider = tk.Scale(self.window, from_=1, to=20, command= self.refreshSliderMove)
         self.refreshSlider.grid(column=2,row=1)
@@ -81,6 +91,13 @@ class GUI_Manager:
         self.labelDW = tk.Button(self.window,text="Color DW",bg=self.colorDW, command=lambda: self.choose_Color("arrcolorDeepWater"))
         self.labelDW.grid(column=3,row=11)
 
+
+        self.markerDisplay = tk.Label(self.window)
+        self.markerDisplay.grid(column=0,row=12)
+
+
+        self.window.after(20,self.refresh_via_queue)
+
         self.window.attributes('-topmost', 'true')
         self.window.mainloop()
 
@@ -88,6 +105,8 @@ class GUI_Manager:
         self.newWindow_status=False
         self.newWindow.destroy()
 
+    def depthBrightSliderMove(self, arg):
+        self.setting_manager.alter_setting("depthBrightness",arg)
 
     def brightSliderMove(self,arg):
         self.setting_manager.alter_setting("addBrightness",arg)
@@ -103,6 +122,10 @@ class GUI_Manager:
     def markerToggle(self):
         print("marker toggle", self.markerState.get())
         self.setting_manager.alter_setting("displayMarkers",self.markerState.get())
+
+    def heightlineToggle(self):
+        print("heightline toggle" , self.heightlineState.get())
+        self.setting_manager.alter_setting("heightlineState",self.heightlineState.get())
 
     def refreshSliderMove(self,arg):
         self.setting_manager.alter_setting("refreshRate",arg)
@@ -121,6 +144,17 @@ class GUI_Manager:
             return '#%02x%02x%02x' % (array[2], array[1], array[0])
         except:
             return "#000000"
+
+    def refresh_via_queue(self):
+       # print("GUI REFRESH",self.queue)
+        if not self.queue.empty():
+            rec = self.queue.get_nowait()
+          #  print("GUI RECEIVE",rec)
+            if rec[0] == "FOUNDMARKERS":
+                self.markerDisplay.config(text="Markers Seen: "+ str(rec[1]))
+
+        self.window.after(20,self.refresh_via_queue)
+
 
     #resets all values to standard values 
     def load_standard_values(self):
