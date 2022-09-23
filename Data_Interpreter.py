@@ -96,7 +96,7 @@ class Data_Interpreter(Thread):
                     self.findmask(new_data[1])
                     cv.imshow("test",cv.resize(self.four_point_transform(new_data[1],self.maskpoints),(500,500)))
                     cv.waitKey(1)
-                    depth = self.four_point_transform(new_data[1],self.maskpoints)
+                    depth = self.four_point_transform(new_data[0],self.maskpoints)
                     processed_data_depth = self.height_transform_lut(depth)
                     if self.heightLineMode==True:
                         processed_data_depth = self.draw_height_lines(processed_data_depth)
@@ -407,13 +407,14 @@ class Data_Interpreter(Thread):
 
     def height_transform_lut(self, data): 
         """Transforms the height data from a Data_Getter Instance into a colour image by using a lookup table."""
-
-        #data = cv.convertScaleAbs(data,alpha=self.depthBrightness)
+        data = data.astype(np.uint8)
+       # data = cv.convertScaleAbs(data,alpha=self.depthBrightness)
         print("HEIHGT TRANSFROM SHAPRE ", data.shape, data)
         self.output.put_nowait(("DEPTH_TEST",data))
 
-       # data = Image.fromarray(data,"L").convert("RGB")
-        #data = np.array(data)
+        data = Image.fromarray(data,"L").convert("RGB")
+        data = np.array(data)
+
         return cv.LUT(data,self.lookup_table)
 
     #places trees 
