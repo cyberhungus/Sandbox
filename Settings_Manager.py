@@ -44,10 +44,12 @@ class Settings_Manager:
            self.write_standards()
         self.read()
 
-    #allows other components/classes to alter settings
-    #parameter=parameter name (see dictionary above)
-    #value=what value to set for that parameter 
     def alter_setting(self,parameter, value):
+        """Allows other classes to alter settings and have them stored in a file. 
+        :param parameter String: What parameter in the configuration shall be altered? 
+        :param value undef: An appropriate value for the configuration parameter. 
+        
+        """
         if not parameter.__contains__("color"): 
             self.settings_dict[parameter] = value 
             self.main_manager.update_settings_hook(self.settings_dict)
@@ -57,8 +59,13 @@ class Settings_Manager:
             self.main_manager.update_settings_hook(self.settings_dict)
             self.write()
 
-    #gathers the settings from a file 
+    
     def read(self):
+        """Reads the settings from a file and stores them in a dictionary. 
+        :return: A dictionary of configuration values. 
+        :rtype: dict 
+        
+        """
         try:
             config_file = open(self.filepath)
             settings = json.load(config_file)
@@ -81,20 +88,26 @@ class Settings_Manager:
             print("Error in Settings Manager",ex )
             return 0 
 
-    #writes settings to file 
+
     def write(self):
+        """Writes the current settings dictionary into a file."""
         try:
             with open(self.filepath, "w") as outfile:
                 json.dump(self.settings_dict, outfile)
         except:
             print("FILEWRITE FAIL ")
 
-    #writes standard settings to file (reset )
+   
     def write_standards(self):
+        """Writes the standard setting dictionary into a file. This is useful for quickly resetting the configuration. """
         with open(self.filepath, "w") as outfile:
             json.dump(self.standard_dict, outfile)
 
     #returns the setting dictionary 
     def get_settings(self):
+        """Returns the setting dictionary. 
+        :return: A dictionary of configuration values. 
+        :rtype: dict 
+        """
         return self.settings_dict
 

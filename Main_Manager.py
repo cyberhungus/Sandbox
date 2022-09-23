@@ -41,9 +41,9 @@ class Main_Manager:
         self.Interpreted_Queue.put_nowait(("MARKER_SIZE",settings_dict['markerSize']))
         self.Interpreted_Queue.put_nowait(("BRIGHTNESS",settings_dict['addBrightness']))
 
-    #turns the color correction function on or off 
-    def toggle_color_correct(self, state):
-        self.Data_Getter.toggle_color_correct(state)
+
+
+
 
     def registerFoundMarkers(self, listOfMarkers):
         print("found markers", listOfMarkers)
@@ -53,13 +53,7 @@ class Main_Manager:
 
 
 if __name__ == '__main__':
-
-    try:
-        #gives program maximum ressources 
-        os.nice(19)
-    except:
-        print("Not on UNIX, nice isnt needed")
-    print("program start")
+    print("Program Start")
     m = Main_Manager()
 
         

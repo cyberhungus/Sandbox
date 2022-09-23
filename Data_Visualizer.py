@@ -25,10 +25,19 @@ class Data_Visualizer:
 
     #the main function of the Data_Getter 
     def visualizer_runner(self):
+        """
+                
+        This is the main function of this class. It receives data via a queue from the Data_Interpreter, then displays it. 
+        This function is run in its' own process for performance reasons. See Main_Manager for more information. 
+        This function may not only receive the final image for display, but also Debug-Images. 
+        The type of image at hand is determined by the first position of the received tuple, as seen below.
+        Via this mechanism, configuration options such as wether to display the ArUco markers and their size and brightness can be manipulated. 
+  
+        """
+
         while 1:
             if not self.input.empty():
                 current_data = self.input.get_nowait()
-                #the data_visualizer may receive different images apart frotm the "normal" depth/color tuple. a String at [0] position denotes this 
                 if current_data[0]=="ANALYZED":
                     self.current_image_full = current_data[1]
                     if self.markerMode==True:
@@ -55,8 +64,8 @@ class Data_Visualizer:
                     cv2.namedWindow("OUTPUT_FULLSCREEN", cv2.WND_PROP_FULLSCREEN)
                     cv2.moveWindow("OUTPUT_FULLSCREEN", 3840,0)
                     cv2.setWindowProperty("OUTPUT_FULLSCREEN",cv2.WND_PROP_FULLSCREEN,cv2.WINDOW_FULLSCREEN)
-                    cv2.imshow("OUTPUT_FULLSCREEN",self.get_current())
-                    cv2.imshow("OUTPUT_CONTROL",cv2.resize(self.get_current(),(400,400)))
+                    cv2.imshow("OUTPUT_FULLSCREEN",self.current_image_full)
+                    cv2.imshow("OUTPUT_CONTROL",cv2.resize(self.current_image_full,(400,400)))
                     cv2.imshow("RGB_Control",cv2.resize(self.current_image_rgb_raw,(400,400)))
                     cv2.imshow("Depth_Control",cv2.resize(self.depth_control,(400,400)))
                     cv2.moveWindow("RGB_Control", 800,0)
@@ -66,12 +75,19 @@ class Data_Visualizer:
                     print("Error in Visualizer: ", ex)
                 if cv2.waitKey(10) == 27:
                     break
-
-    def get_current(self):
-        return self.current_image_full
-
-    #puts aruco markers in the corner of the displayed image. this can be toggled in the UI 
+    
     def place_ar_corners(self, image):
+        """
+        This function places ArUco-markers in the corners of an image. 
+        This can be turned on and off in the UI. 
+
+        :param np.array image: The image on which the ArUco markers shall be drawn. 
+
+        :returns: The image with the added ArUco markers. 
+        :rtype: np.array
+        
+        """
+
         try:
             image[np.where((image==[1,1,1]).all(axis=2))] = [255,255,255]
             image = cv2.resize(image,(self.output_width,self.output_height))
@@ -96,6 +112,18 @@ class Data_Visualizer:
                 
 
     def increase_brightness(self,img, value=30):
+        """
+        This function can alter the brightness of an np.array image. 
+
+        :param np.array img: The image which is to be altered. 
+        :param int value: The amount by which the image is to be brightened. 
+
+
+        :returns: The brightened image. 
+        :rtype: np.array
+        
+        """
+
         hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
         h, s, v = cv2.split(hsv)
         lim = 255 - value

@@ -16,6 +16,10 @@ class GUI_Manager:
         self.queue = pipe 
         
     def start_gui(self):
+        """
+        This function contains all UI elements that are part of the User Interface. 
+        
+        """
         self.window = tk.Tk()
         self.label = tk.Label(self.window, text="Sandbox GUI")
         self.label.grid(column=1,row=0)
@@ -101,70 +105,149 @@ class GUI_Manager:
         self.window.attributes('-topmost', 'true')
         self.window.mainloop()
 
-    def on_close_new(self):
-        self.newWindow_status=False
-        self.newWindow.destroy()
 
     def depthBrightSliderMove(self, arg):
+        """
+        Called when the depth brightness slider is moved. 
+        This changes an alpha-value in the Data_Interpreter 
+
+        :param int arg: The current value of the slider. This value is later divided by 100. Parameter is passed via callback provided by tkinter. 
+
+        """
+
+
         self.setting_manager.alter_setting("depthBrightness",arg)
 
     def brightSliderMove(self,arg):
+        """
+        Called when the brightness slider is moved. 
+        This changes the addBrightness value in the Data_Visualizer, which is used for the ArUco markers. 
+
+        :param int arg: The current value of the slider. Parameter is passed via callback provided by tkinter. 
+
+        """
         self.setting_manager.alter_setting("addBrightness",arg)
 
     def waterSliderMove(self,arg):
+        """
+        Called when the waterlevel slider is moved. 
+        This changes the waterLevel value in the Data_Interpreter, which is linked to many functions of that class.
+
+        :param int arg: The current value of the slider. Parameter is passed via callback provided by tkinter. 
+
+        """
         self.setting_manager.alter_setting("waterlevel",arg)
 
 
     def markerSliderMove(self,arg):
+        """
+        Called when the MarkerSize slider is moved. 
+        This changes the markerSize value in the Data_Visualizer, which is used for the size of the ArUco markers. 
+
+        :param int arg: The current value of the slider. Parameter is passed via callback provided by tkinter. 
+
+        """
         self.setting_manager.alter_setting("markerSize",arg)
         self.labelMarkerSize.config(text="Marker Size: "+str(arg))
 
     def markerToggle(self):
-        print("marker toggle", self.markerState.get())
+        """
+        Called when one of the markerState radiobuttons is selected. 
+        This controls wether markers are displayed on top of the projected image in the Data_Visualizer. 
+        Due to how tkinter handles radiobuttons, no argument is needed. 
+
+        """
         self.setting_manager.alter_setting("displayMarkers",self.markerState.get())
 
     def heightlineToggle(self):
-        print("heightline toggle" , self.heightlineState.get())
+        """
+        Called when one of the markerState radiobuttons is selected. 
+        This controls wether heightlines are drawn on the image in the Data_Interpreter. 
+        Due to how tkinter handles radiobuttons, no argument is needed. 
+
+        """
+
         self.setting_manager.alter_setting("heightlineState",self.heightlineState.get())
 
     def refreshSliderMove(self,arg):
+        """
+        Called when the refreshRate slider is moved. 
+        This changes the frequency at which images are polled from the Camera in Data_Getter.
+
+        :param int arg: The current value of the slider. Parameter is passed via callback provided by tkinter. 
+
+        """
         self.setting_manager.alter_setting("refreshRate",arg)
 
     def treeSliderMove(self,arg):
         self.setting_manager.alter_setting("newTrees",arg)
 
     def array_color_hex(self,array):
+        """
+        Helper function which transforms a three value list representing an RGB color into a string that can be used to color tkinter elements. 
+        This is the RGB version of that function. 
+
+        :param list array: A three value list representing a color - [RED, GREEN, BLUE]
+
+        :returns: A String representing the input color.  
+        :rtype: String 
+        """
+
         try:
             return '#%02x%02x%02x' % (array[0], array[1], array[2])
         except:
             return "#000000"
 
     def bgr_array_color_hex(self,array):
+        """
+        Helper function which transforms a three value list representing a BGR color into a string that can be used to color tkinter elements. 
+        This is the BGR version of that function. 
+
+        :param list array: A three value list representing a color - [BLUE, GREEN, RED]
+
+        :returns: A String representing the input color.  
+        :rtype: String 
+        """
+
         try:
             return '#%02x%02x%02x' % (array[2], array[1], array[0])
         except:
             return "#000000"
 
     def refresh_via_queue(self):
-       # print("GUI REFRESH",self.queue)
+        """
+        This function is repeatedly called via tk's "after" method. It polls a queue for new data which can then be displayed in the UI.
+        
+        """
         if not self.queue.empty():
             rec = self.queue.get_nowait()
-          #  print("GUI RECEIVE",rec)
+
             if rec[0] == "FOUNDMARKERS":
                 self.markerDisplay.config(text="Markers Seen: "+ str(rec[1]))
 
         self.window.after(20,self.refresh_via_queue)
 
 
-    #resets all values to standard values 
     def load_standard_values(self):
+        """
+        Called when the "Standard Values/RESET" button is pressed.
+        Orders the Settings_Manager to reload standard parameters, which also applies them to all components. 
+
+        """
         self.setting_manager.write_standards()
         self.setting_manager.read()
         self.update_ui()
 
-    #displays the color picker 
     def choose_Color(self,param):
-        # variable to store hexadecimal code of color
+        """
+        Called when one of the various color buttons is pressed. 
+        Opens a colorpicker window. When "OK" is pressed in that window, the GUI_Manager passes that value to the setting_manager and in turn to the 
+        Data_Visualizer. What color is changed is determined by the param argument. 
+        Then the respective Button is recolored. 
+
+        :param String param: The name of the color to be changed in the settings manager. 
+
+        """
         try:
             color_code = colorchooser.askcolor(title ="Choose color")
             self.setting_manager.alter_setting(param,[round(color_code[0][2]),round(color_code[0][1]),round(color_code[0][0])])
@@ -172,10 +255,12 @@ class GUI_Manager:
         except Exception as ex:
             print("Color chooser closed without selection or error:",ex)
 
-    #hook to update the ui 
+    
     def update_ui(self):
+        """
+        Updates colors and values in the UI. 
+        """
         self.waterslider.set(self.setting_manager.get_settings()['waterlevel'])
-
         self.colorA =  self.bgr_array_color_hex(self.setting_manager.get_settings()['colorA'])
         self.labelA.config(bg=self.colorA)
         self.colorB =  self.bgr_array_color_hex(self.setting_manager.get_settings()['colorB'])
