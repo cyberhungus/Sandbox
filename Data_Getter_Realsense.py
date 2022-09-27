@@ -30,7 +30,7 @@ class Data_Getter:
         self.pipeline = rs.pipeline()       
         config = rs.config()
         #use max resolution 
-        config.enable_stream(rs.stream.depth, 1024, 768, rs.format.z16, 30)
+        config.enable_stream(rs.stream.depth, 1280, 720, rs.format.z16, 30)
         config.enable_stream(rs.stream.color, 1920,1080, rs.format.bgr8, 15)
         self.device_manager =self.pipeline.start(config)
 

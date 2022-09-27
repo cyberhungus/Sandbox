@@ -77,6 +77,9 @@ class Data_Interpreter(Thread):
 
         self.heightLineMode = True
 
+        self.firstOffset = -50
+        self.secondOffset = 0 
+
 
     def run(self):
         """
@@ -94,16 +97,17 @@ class Data_Interpreter(Thread):
                 else:
                     starttime = timeit.default_timer()
                     self.findmask(new_data[1])
-                    cv.imshow("test",cv.resize(self.four_point_transform(new_data[1],self.maskpoints),(500,500)))
-                    cv.waitKey(1)
-                    depth = self.four_point_transform(new_data[0],self.maskpoints)
+                    #cv.imshow("test",cv.resize(self.four_point_transform(new_data[1],self.maskpoints),(500,500)))
+                    #cv.waitKey(1)
+                   # depth = self.four_point_transform(new_data[0],self.maskpoints)
+                    depth=new_data[0]
                     processed_data_depth = self.height_transform_lut(depth)
                     if self.heightLineMode==True:
                         processed_data_depth = self.draw_height_lines(processed_data_depth)
                     full_img = self.process_aruco(new_data[1],processed_data_depth)
-                   # full_img = self.process_aruco(new_data[1], processed_data_depth)         
-                  #  self.output.put_nowait(("ANALYZED",self.applymask(full_img)))
-                    self.output.put_nowait(("ANALYZED",full_img))
+                 
+                    self.output.put_nowait(("ANALYZED",self.applymask(full_img)))
+                   # self.output.put_nowait(("ANALYZED",full_img))
                     print("Time for color convert algorithm :", timeit.default_timer() - starttime)
 
 
@@ -162,8 +166,16 @@ class Data_Interpreter(Thread):
                         for point in bbox[0]:
                             center_calc_arr.append([int(point[0]),int(point[1])])
                         sorted_points = self.sortpoints(center_calc_arr)
-                        length = sorted_points[1]-sorted_points[0]                   
-                        mid = self.calc_middle(center_calc_arr)
+ 
+                        if codeID == 0: 
+                            mid = sorted_points[0]
+                        elif codeID==1:
+                            mid = sorted_points[3]
+                        elif codeID==2:
+                            mid = sorted_points[2]
+                        elif codeID==3:
+                            mid = sorted_points[1]
+                        #mid = self.calc_middle(center_calc_arr)
                         self.maskpoints.append(mid)
             self.maskpoints = self.sortpoints(self.maskpoints)
         else:
@@ -204,7 +216,7 @@ class Data_Interpreter(Thread):
         :rtype: np.array
         
         """
-
+        self.maskpoints += (self.firstOffset,self.secondOffset)
 
         img = np.ones((1080,1920,3),dtype=np.uint8)
         h, w, c = imgAug.shape
@@ -407,8 +419,8 @@ class Data_Interpreter(Thread):
 
     def height_transform_lut(self, data): 
         """Transforms the height data from a Data_Getter Instance into a colour image by using a lookup table."""
-        data = data.astype(np.uint8)
-       # data = cv.convertScaleAbs(data,alpha=self.depthBrightness)
+      #  data = data.astype(np.uint8)
+        data = cv.convertScaleAbs(data,alpha=self.depthBrightness)
         print("HEIHGT TRANSFROM SHAPRE ", data.shape, data)
         self.output.put_nowait(("DEPTH_TEST",data))
 
@@ -545,3 +557,9 @@ class Data_Interpreter(Thread):
             elif new_data[0]=="newTrees":
                 if self.tree_state==True:
                     self.tree_manager.generate_new_tree_pos(int(new_data[1]))  
+            elif new_data[0]=="xoffset":
+                self.firstOffset = new_data[1]
+
+            elif new_data[0]=="yoffset":
+                self.secondOffset = new_data[1]
+

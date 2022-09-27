@@ -1,5 +1,6 @@
 
 from itertools import filterfalse
+from multiprocessing import Value
 from pickle import FALSE
 import tkinter as tk 
 from tkinter import colorchooser
@@ -14,6 +15,8 @@ class GUI_Manager:
         self.newWindow_status = False
         self.selected_points = []
         self.queue = pipe 
+        self.xoffset = 0
+        self.yoffset = 0
         
     def start_gui(self):
         """
@@ -96,6 +99,36 @@ class GUI_Manager:
         self.labelDW.grid(column=3,row=11)
 
 
+        self.xplusone = tk.Button(self.window,text="x+1",  command=lambda: self.x_offset_change(-1))
+        self.xplusone.grid(column=3,row=14)
+        self.xminusone = tk.Button(self.window,text="x-1",  command=lambda: self.x_offset_change(1))
+        self.xminusone.grid(column=1,row=14)
+        self.xplusten = tk.Button(self.window,text="x+10",  command=lambda: self.x_offset_change(-10))
+        self.xplusten.grid(column=4,row=14)
+        self.xminusten = tk.Button(self.window,text="x-10",  command=lambda: self.x_offset_change(10))
+        self.xminusten.grid(column=0,row=14)
+        self.xreset = tk.Button(self.window,text="x-Reset",  command=lambda: self.x_reset())
+        self.xreset.grid(column=2,row=14)
+
+
+        self.xoffsetLabel = tk.Label(self.window, text="X-Offset: 0")
+        self.xoffsetLabel.grid(column=5,row=14)
+
+        self.yplusone = tk.Button(self.window,text="y+1",  command=lambda: self.y_offset_change(-1))
+        self.yplusone.grid(column=3,row=15)
+        self.yminusone = tk.Button(self.window,text="y-1",  command=lambda: self.y_offset_change(1))
+        self.yminusone.grid(column=1,row=15)
+        self.yplusten = tk.Button(self.window,text="y+10",  command=lambda: self.y_offset_change(-10))
+        self.yplusten.grid(column=4,row=15)
+        self.yminusten = tk.Button(self.window,text="y-10",  command=lambda: self.y_offset_change(10))
+        self.yminusten.grid(column=0,row=15)
+        self.yreset = tk.Button(self.window,text="y-Reset",  command=lambda: self.y_reset())
+        self.yreset.grid(column=2,row=15)
+        
+        self.yoffsetLabel = tk.Label(self.window, text="Y-Offset: 0")
+        self.yoffsetLabel.grid(column=5,row=15)
+
+
         self.markerDisplay = tk.Label(self.window)
         self.markerDisplay.grid(column=0,row=12)
 
@@ -104,6 +137,48 @@ class GUI_Manager:
 
         self.window.attributes('-topmost', 'true')
         self.window.mainloop()
+
+    def x_offset_change(self, value):
+        """
+        Called when pressing one of the offset buttons.
+        Changes the offset on the x axis
+
+        :param int value: The value to change the x axis offset by. Can be negative or positive
+        """
+        self.xoffset+=value
+        self.setting_manager.alter_setting("xoffset",self.xoffset)
+        self.xoffsetLabel.config(text="X-Offset: "+str(self.xoffset))
+
+    def x_reset(self):
+        """
+        Resets the x offset value back to zero. 
+        Called when pressing the x reset button. 
+        """
+        self.xoffset = 0
+        self.setting_manager.alter_setting("xoffset",self.xoffset)
+        self.xoffsetLabel.config(text="X-Offset: "+str(self.xoffset))
+
+
+    def y_offset_change(self, value):
+        """
+        Called when pressing one of the offset buttons.
+        Changes the offset on the y axis
+
+        :param int value: The value to change the y axis offset by. Can be negative or positive
+        """
+        self.yoffset+=value
+        self.setting_manager.alter_setting("yoffset",self.yoffset)
+        self.yoffsetLabel.config(text="Y-Offset: "+str(self.yoffset))
+
+    def y_reset(self):
+        """
+        Resets the y offset value back to zero. 
+        Called when pressing the y reset button. 
+        """
+        self.yoffset = 0
+        self.setting_manager.alter_setting("yoffset",self.yoffset)
+        self.yoffsetLabel.config(text="Y-Offset: "+str(self.yoffset))
+
 
 
     def depthBrightSliderMove(self, arg):
@@ -223,7 +298,12 @@ class GUI_Manager:
             rec = self.queue.get_nowait()
 
             if rec[0] == "FOUNDMARKERS":
-                self.markerDisplay.config(text="Markers Seen: "+ str(rec[1]))
+                seenString =""
+                for item in rec[1]:
+                    seenString+=str(item)
+                    seenString+="-"
+
+                self.markerDisplay.config(text="Markers Seen: "+ seenString)
 
         self.window.after(20,self.refresh_via_queue)
 

@@ -1,5 +1,5 @@
 import multiprocessing as mp
-import Data_Getter_Realsense as dg
+import Data_Getter_TEST as dg
 import Data_Interpreter as di
 import Data_Visualizer as dv
 import Settings_Manager as sm 
