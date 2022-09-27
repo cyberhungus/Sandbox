@@ -13,12 +13,12 @@ import os
 #color_correct: Uses the pixels on the top right of the image to set the color of tokens used for AR-functionality 
 class Data_Getter:
 
-    def __init__(self, freq, output_queue_interpreter,output_data_vis,manager, resolution = (640,480),color_correct=False ):
+    def __init__(self, freq, output_queue_interpreter,manager, resolution = (640,480),color_correct=False ):
         self.freq = freq
         self.ms_delay = 1000/self.freq 
         print("Capture Delay", self.ms_delay)
         self.output = output_queue_interpreter
-        self.visualizer_output = output_data_vis
+
         self.next_capture_time = 0 
         self.resolution = resolution 
         self.color_correct = color_correct
@@ -38,7 +38,7 @@ class Data_Getter:
                 if captured_data is not None:
                     output_data_grey = cv.cvtColor(captured_data, cv.COLOR_BGR2GRAY)
                     self.output.put_nowait((output_data_grey,captured_data))
-                    self.visualizer_output.put_nowait(("RAW_RGB",captured_data))
+                   # self.visualizer_output.put_nowait(("RAW_RGB",captured_data))
                 else:
                     print("Captured Data None")
 

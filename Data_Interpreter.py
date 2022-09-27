@@ -97,6 +97,7 @@ class Data_Interpreter(Thread):
                 else:
                     starttime = timeit.default_timer()
                     self.findmask(new_data[1])
+                    self.output.put_nowait(("RAW_RGB",new_data[1]))
                     #cv.imshow("test",cv.resize(self.four_point_transform(new_data[1],self.maskpoints),(500,500)))
                     #cv.waitKey(1)
                    # depth = self.four_point_transform(new_data[0],self.maskpoints)

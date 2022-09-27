@@ -13,12 +13,12 @@ import frame_convert2 as fc
 #resulotion: capture resolution for normal camera
 #color_correct: Uses the pixels on the top right of the image to set the color of tokens used for AR-functionality 
 class Data_Getter:
-    def __init__(self, freq, output_queue_interpreter,output_data_vis,manager, resolution = (640,480),color_correct=False ):
+    def __init__(self, freq, output_queue_interpreter,manager, resolution = (640,480),color_correct=False ):
         self.freq = freq
         self.ms_delay = 1000/self.freq 
         print("Capture Delay", self.ms_delay)
         self.output = output_queue_interpreter
-        self.visualizer_output = output_data_vis
+
         self.next_capture_time = 0 
         self.resolution = resolution 
         self.color_correct = color_correct
@@ -44,37 +44,32 @@ class Data_Getter:
 
     #get data gets the depth and RGB data from kinect (or two regular images from a webcam) and puts them into a queue so the data_interpreter can receive them
     def get_Data(self):
+        """
+        This is the main function of this class. First it checks wether the time is right to send a new image to Data_Interpreter. 
+        Then the actual image and depth data is taken from the camera. This data is then aligned and filtered, using temporal filtering (average between several pictures)
+        and a hole filling algorithm is also applied. The data is then converted to a numpy array. Those arrays are passed to data_interpreter
+
+        
+        """
         while 1:
-            #normal function (check time, if time larger than next capture time,
-            #capture data and put in queue
+
             if self.current_milli_time() > self.next_capture_time:
                 try:
                     self.next_capture_time = self.current_milli_time()+self.ms_delay
                     frames = self.pipeline.wait_for_frames()
-                    #align color and depth data 
                     self.align = rs.align(rs.stream.color)                
                     aligned_frames = self.align.process(frames)
                     color_frame = aligned_frames.first(rs.stream.color)
                     depth_frame = aligned_frames.get_depth_frame()
-                    #add image to image buffer, if imagebuffer is overcrowded, remove the oldest element, then average the data in the buffer
                     self.image_buffer.append(depth_frame)
                     if len(self.image_buffer)>self.interpolation_number:
                         self.image_buffer.pop(0)
                     for image in self.image_buffer:
                             depth_frame_temp_filter = self.temporal_filter.process(image)
-                    #perform hole filling on data 
                     depth_frame = self.hole_filler.process(depth_frame_temp_filter)
-                    #extracts frame data as numpy array 
                     depth_data = np.asanyarray(depth_frame.get_data())
-                    color_data = np.asanyarray(color_frame.get_data())
-                            
-                    #sends raw color data to visualizer for display 
-                    self.visualizer_output.put_nowait(("RAW_RGB",color_data))
-                    #looks at top right pixel and sends the calue to data interpreter, where it is used to find AR-tokens 
-                    if self.color_correct == True:
-                        capture_color_reference = color_data[10][10]
-                        self.output.put_nowait(("color_correct",capture_color_reference))
-                    #sends depth and color data to visualizer for analysis 
+                    color_data = np.asanyarray(color_frame.get_data())        
+
                     self.output.put_nowait((depth_data,color_data))
 
                 except Exception as ex:
@@ -82,12 +77,23 @@ class Data_Getter:
 
                
           
-    #helper function for time in milliseconds       
+        
     def current_milli_time(self):
+        """Returns time in milliseconds. Use to regulate capture frequency. 
+        
+        :returns: The current time in milliseconds. 
+        :rtype : int
+        
+        """
         return round(t.time()*1000)
 
-    #alters refresh rate 
+   
     def update_refresh_rate(self, new_rate):
+        """Changes the refresh rate
+        
+        :param int new_rate: How many images should be passed to Data_Visualizer per second. 
+        
+        """
         self.ms_delay = 1000/int(new_rate)
 
 

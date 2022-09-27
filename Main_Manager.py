@@ -15,7 +15,7 @@ class Main_Manager:
 
         self.Interpreted_Queue = mp.Queue()
         self.Settings_Manager = sm.Settings_Manager(self)
-        self.Data_Getter = dg.Data_Getter(1,self.Raw_Queue,self.Interpreted_Queue,self)
+        self.Data_Getter = dg.Data_Getter(1,self.Raw_Queue,self)
         
 
         self.Data_Interpreter = di.Data_Interpreter(self.Raw_Queue, self.Interpreted_Queue, self.FrontendQueue)
@@ -41,12 +41,6 @@ class Main_Manager:
         self.Interpreted_Queue.put_nowait(("MARKER_SIZE",settings_dict['markerSize']))
         self.Interpreted_Queue.put_nowait(("BRIGHTNESS",settings_dict['addBrightness']))
 
-
-
-
-
-    def registerFoundMarkers(self, listOfMarkers):
-        print("found markers", listOfMarkers)
 
 
 
