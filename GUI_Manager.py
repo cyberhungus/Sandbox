@@ -50,13 +50,13 @@ class GUI_Manager:
         self.heightlineOffButt.grid(column=1, row=5)
 
         self.brightSlider = tk.Scale(self.window, from_=0, to=250, command= self.brightSliderMove)
-        self.brightSlider.set(100)
+        self.brightSlider.set(0)
         self.brightSlider.grid(column=6,row=1)
         self.brightMarkerSize = tk.Label(self.window, text="Marker Bright.")
         self.brightMarkerSize.grid(column=6,row=3)
 
         
-        self.depthBrightSlider = tk.Scale(self.window, from_=0, to=10, command= self.depthBrightSliderMove)
+        self.depthBrightSlider = tk.Scale(self.window, from_=0, to=100, command= self.depthBrightSliderMove)
         self.depthBrightSlider.set(3)
         self.depthBrightSlider.grid(column=7,row=1)
         self.depthBrightMarkerSize = tk.Label(self.window, text="Depth Alpha")
@@ -299,13 +299,18 @@ class GUI_Manager:
 
             if rec[0] == "FOUNDMARKERS":
                 seenString =""
-                for item in rec[1]:
-                    seenString+=str(item)
-                    seenString+="-"
+                try:
+                    for item in rec[1]:
+                        seenString+=str(item)
+                        seenString+="-"
+                except:
+                    print("GUI MARKER TRANSMISSION ER ER")
 
                 self.markerDisplay.config(text="Markers Seen: "+ seenString)
 
         self.window.after(20,self.refresh_via_queue)
+
+
 
 
     def load_standard_values(self):

@@ -11,6 +11,7 @@ import timeit
 import imutils as imu
 import os
 from Object_Manager import Tree_Manager as tm
+import LookupTableVisualizer as Lutvis
 
 #this class receives image data via a queue, iterates through the pixels, and changes their colour in accordance with height data 
 class Data_Interpreter(Thread):
@@ -21,13 +22,10 @@ class Data_Interpreter(Thread):
 
         self.input = input_queue
         self.output = output_queue
-        self.waterlevel = 30
+        self.waterlevel = 120
+        self.waterheight = 256
 
         self.shapes =[]
-
-        self.tree_state = has_trees
-        if self.tree_state == True:
-            self.tree_manager = tm(10, 480,640)
 
 
         self.borders_set = False
@@ -42,9 +40,9 @@ class Data_Interpreter(Thread):
         self.colorE = (120,150,100)
         self.colorF = (200,200,100)
         self.colorF = (250,200,200)
-        self.colorG = (250,250,0)
-        self.colorWater = (200,50,0)
-        self.colorDeepWater = (250,50,0)
+        self.colorG = (250,250,250)
+        self.colorWater = (200,0,0)
+        self.colorDeepWater = (250,00,0)
 
         filepath = os.getcwd()+"/assets/newTopoItem.png"
         self.houseIMG = cv.imread(filepath,cv.IMREAD_COLOR)
@@ -56,18 +54,16 @@ class Data_Interpreter(Thread):
         filepath = os.getcwd()+"/assets/tree.png"
         self.treeIMG = cv.imread(filepath,cv.IMREAD_UNCHANGED)
   #     
-        self.lookup_table = self.generate_LUT()
+
 
         self.displaysize =(1920,1080)
-
-        self.displayoffset = 50 
 
 
         self.maskpoints = [[0,0],[1080,1920]]
         self.lastMaskPoints = 0 
         self.standardmask = [[0,0],[1920,0],[0,1080],[1920,1080]]
 
-        self.depthBrightness = 0.01
+        self.depthBrightness = 0.035
 
 
         self.realArucoSizeMM = 26.28
@@ -77,9 +73,13 @@ class Data_Interpreter(Thread):
 
         self.heightLineMode = True
 
-        self.firstOffset = -50
+        self.firstOffset =  0
         self.secondOffset = 0 
 
+        self.heightrangeLOW = 0
+        self.heightrangeHIGH = 255
+        
+        self.lookup_table = self.generate_LUT()
 
     def run(self):
         """
@@ -95,21 +95,29 @@ class Data_Interpreter(Thread):
                     self.argDecoder(new_data)
 
                 else:
-                    starttime = timeit.default_timer()
+                    #starttime = timeit.default_timer()
                     self.findmask(new_data[1])
+                    #print(self.maskpoints)
                     self.output.put_nowait(("RAW_RGB",new_data[1]))
                     #cv.imshow("test",cv.resize(self.four_point_transform(new_data[1],self.maskpoints),(500,500)))
                     #cv.waitKey(1)
-                   # depth = self.four_point_transform(new_data[0],self.maskpoints)
+                    #depth = self.four_point_transform(new_data[0],self.maskpoints)
                     depth=new_data[0]
+                    print("Average depth is",self.determineAvgDepth(depth))
+                    #self.waterlevel = self.determineAvgDepth(depth)
                     processed_data_depth = self.height_transform_lut(depth)
                     if self.heightLineMode==True:
                         processed_data_depth = self.draw_height_lines(processed_data_depth)
                     full_img = self.process_aruco(new_data[1],processed_data_depth)
+                    cv.imshow("LUT", Lutvis.showLUT(self.lookup_table))
+                    cv.waitKey(1)
                  
                     self.output.put_nowait(("ANALYZED",self.applymask(full_img)))
+
+                    
+                    #self.output.put_nowait(("ANALYZED",self.four_point_transform(new_data[0],self.maskpoints)))
                    # self.output.put_nowait(("ANALYZED",full_img))
-                    print("Time for color convert algorithm :", timeit.default_timer() - starttime)
+                   # print("Time for color convert algorithm :", timeit.default_timer() - starttime)
 
 
 
@@ -148,7 +156,28 @@ class Data_Interpreter(Thread):
 
 
 
+    def determineAvgDepth(self, depthimg):
+        try:
+            aruco_depth = []
+            for p in self.maskpoints:
+                #print("cornerpoint", p )        
+                depthimg = cv.convertScaleAbs(depthimg,alpha=self.depthBrightness)
+                depthimg = cv.resize(depthimg, (1920,1080), interpolation = cv.INTER_AREA)
+               # print("depth img resized",depthimg.shape)
+                aruco_depth.append(depthimg[int(p[1])-1, int(p[0])-1])
+            summed = 0 
+            for num in aruco_depth:
+                summed += num 
+            return summed / 4
+        except Exception as ex:
+            print("avrg depth ex,", ex)
+            return 0 
 
+
+
+
+
+    #TODO FIGure this out
     def findmask(self, img):
         """ Finds the masking points circumscribing the display area - i.e. ArUco Markers 0 through 3. 
             The center of said markers is the determined, and the four markers are sorted to be used as a mask. 
@@ -161,7 +190,9 @@ class Data_Interpreter(Thread):
         arucofound = self.findArucoMarkers(img)
         if arucofound:
             if len(arucofound[0])>=4:
+                print(arucofound[1])
                 for bbox, codeID in zip(arucofound[0], arucofound[1]):
+                    
                     if codeID in range(0,4):
                         center_calc_arr = []
                         for point in bbox[0]:
@@ -179,6 +210,8 @@ class Data_Interpreter(Thread):
                         #mid = self.calc_middle(center_calc_arr)
                         self.maskpoints.append(mid)
             self.maskpoints = self.sortpoints(self.maskpoints)
+
+
         else:
             self.maskpoints = self.standardmask
 
@@ -217,15 +250,16 @@ class Data_Interpreter(Thread):
         :rtype: np.array
         
         """
-        self.maskpoints += (self.firstOffset,self.secondOffset)
+
 
         img = np.ones((1080,1920,3),dtype=np.uint8)
         h, w, c = imgAug.shape
-        pts1 = np.array(np.array(self.maskpoints))
+        pts1 = np.array(np.array(self.maskpoints)+(self.firstOffset,self.secondOffset))
+        #pts2 = np.float32([[0,0], [w,0], [w,h], [0,h]])
         pts2 = np.float32([[0,0], [w,0], [w,h], [0,h]])
         matrix, _ = cv.findHomography(pts1, pts2)
         imgout = cv.warpPerspective(imgAug, matrix, (img.shape[1], img.shape[0]))
-        cv.fillConvexPoly(img, pts1.astype(int), (0, 0, 0))
+       # cv.fillConvexPoly(img, pts1.astype(int), (0, 0, 0))
         imgout = img + imgout
         return imgout
 
@@ -361,33 +395,64 @@ class Data_Interpreter(Thread):
         """
         lookup_table = np.zeros((256,1,3),dtype=np.uint8)
         color_table=[]
-        remainder = (255-self.waterlevel)/6
+        remainder = (256-self.waterlevel)/6
         for num in range(256):
+
+
+
+            #if num < self.heightrangeLOW:
+            #    color_table.append([0,0,0])
+
+            #elif num > self.heightrangeHIGH:
+            #    color_table.append([255,255,255])
+
+            #else:
+               
+
+            #if num in range(0,int(self.waterlevel/2)):
+            #    color_table.append(self.colorG)        
+            #elif num in range(int(self.waterlevel/2),self.waterlevel):
+            #    color_table.append(self.make_gradient_color(num, int(self.waterlevel/2),int(self.waterlevel),self.colorG, self.colorF))
+            #elif num in range(int(self.waterlevel),int(self.waterlevel+remainder)):
+            #    color_table.append(self.make_gradient_color(num, int(self.waterlevel),int(self.waterlevel+remainder),self.colorF,self.colorE)) 
+            #elif num in range(int(self.waterlevel+remainder),int(self.waterlevel+remainder*2)):
+            #        color_table.append(self.make_gradient_color(num, int(self.waterlevel+remainder*1),int(self.waterlevel+remainder*2),self.colorE,self.colorD))
+            #elif num in range(int(self.waterlevel+remainder*2),int(self.waterlevel+remainder*3)):
+            #    color_table.append(self.make_gradient_color(num, int(self.waterlevel+remainder*2),int(self.waterlevel+remainder*3),self.colorD,self.colorC))   
+            #elif num in range(int(self.waterlevel+remainder*3),int(self.waterlevel+remainder*4)):
+            #    color_table.append(self.make_gradient_color(num, int(self.waterlevel+remainder*3),int(self.waterlevel+remainder*4),self.colorC,self.colorB))    
+            #elif num in range(int(self.waterlevel+remainder*4),int(self.waterlevel+remainder*5)):
+            #    color_table.append(self.make_gradient_color(num, int(self.waterlevel+remainder*4),int(self.waterlevel+remainder*5),self.colorB,self.colorA))  
+            #elif num in range(int(self.waterlevel+remainder*5),int(self.waterlevel+remainder*6)):
+            #    color_table.append(self.colorWater)   
+            #elif num in range(int(self.waterlevel+remainder*6),int(255)):
+            #    color_table.append(self.colorDeepWater)
+            
             if num in range(0,int(self.waterlevel/2)):
                 color_table.append(self.colorG)        
             elif num in range(int(self.waterlevel/2),self.waterlevel):
-                color_table.append(self.make_gradient_color(num, int(self.waterlevel/2),int(self.waterlevel),self.colorG, self.colorF))
+                color_table.append(self.colorF)
             elif num in range(int(self.waterlevel),int(self.waterlevel+remainder)):
-                color_table.append(self.make_gradient_color(num, int(self.waterlevel),int(self.waterlevel+remainder),self.colorF,self.colorE)) 
+                color_table.append(self.colorE)
             elif num in range(int(self.waterlevel+remainder),int(self.waterlevel+remainder*2)):
-                 color_table.append(self.make_gradient_color(num, int(self.waterlevel+remainder*1),int(self.waterlevel+remainder*2),self.colorE,self.colorD))
+                color_table.append(self.colorD)
             elif num in range(int(self.waterlevel+remainder*2),int(self.waterlevel+remainder*3)):
-                color_table.append(self.make_gradient_color(num, int(self.waterlevel+remainder*2),int(self.waterlevel+remainder*3),self.colorD,self.colorC))   
+                color_table.append(self.colorC)
             elif num in range(int(self.waterlevel+remainder*3),int(self.waterlevel+remainder*4)):
-               color_table.append(self.make_gradient_color(num, int(self.waterlevel+remainder*3),int(self.waterlevel+remainder*4),self.colorC,self.colorB))    
+                color_table.append(self.colorB) 
             elif num in range(int(self.waterlevel+remainder*4),int(self.waterlevel+remainder*5)):
-                color_table.append(self.make_gradient_color(num, int(self.waterlevel+remainder*4),int(self.waterlevel+remainder*5),self.colorB,self.colorA))  
+                color_table.append(self.colorA)
             elif num in range(int(self.waterlevel+remainder*5),int(self.waterlevel+remainder*6)):
                 color_table.append(self.colorWater)   
             elif num in range(int(self.waterlevel+remainder*6),int(255)):
                 color_table.append(self.colorDeepWater)
-            else:
-                color_table.append([255,0,255])
 
             lookup_table[num,0,0]= color_table[num][0]
             lookup_table[num,0,1]=color_table[num][1]
             lookup_table[num,0,2]=color_table[num][2]
+
         return lookup_table
+        #return np.flip(lookup_table, axis =2)
 
 
     
@@ -414,6 +479,7 @@ class Data_Interpreter(Thread):
         newBlue = colorMin[0] + percentage * (colorMax[0]- colorMin[0]);
 
         gradientColor = (newRed,newGreen,newBlue)
+        #return gradientColor
         return gradientColor
 
 
@@ -422,53 +488,13 @@ class Data_Interpreter(Thread):
         """Transforms the height data from a Data_Getter Instance into a colour image by using a lookup table."""
       #  data = data.astype(np.uint8)
         data = cv.convertScaleAbs(data,alpha=self.depthBrightness)
-        print("HEIHGT TRANSFROM SHAPRE ", data.shape, data)
+       # print("HEIHGT TRANSFROM SHAPRE ", data.shape, data)
         self.output.put_nowait(("DEPTH_TEST",data))
 
         data = Image.fromarray(data,"L").convert("RGB")
         data = np.array(data)
 
         return cv.LUT(data,self.lookup_table)
-
-    #places trees 
-    def tree_placer(self,img, pos_list):
-        rimg = Image.fromarray(img,"RGB").convert("RGBA")
-        return_img = np.array(rimg)
-
-        for item in pos_list:
-            color_at_pos = (return_img[item[0]][item[1]][0],return_img[item[0]][item[1]][1],return_img[item[0]][item[1]][2],return_img[item[0]][item[1]][3])
-            if color_at_pos == self.rgba_help(self.colorA,255):
-                self.plant_tree(5,item,return_img)
-            elif color_at_pos == self.rgba_help(self.colorB,255):
-                self.plant_tree(10,item,return_img)
-            elif color_at_pos == self.rgba_help(self.colorC,255):
-                self.plant_tree(15,item,return_img)
-            elif color_at_pos == self.rgba_help(self.colorD,255):
-                self.plant_tree(20,item,return_img)
-
-
-            cv.circle(return_img,item,5,(0,220,0))
-            #cv.putText(img,str(color_at_pos),item,0,0.5,(255,255,255))
-        return return_img
-
-
-
-
-    def plant_tree(self,size,pos,img):
-        x_offset = size
-        y_offset = size
-        x_min,y_min = pos[0]-x_offset,pos[1]-y_offset
-        x_max,y_max = pos[0]+x_offset,pos[1]+y_offset
-        tree = self.treeIMG.copy()
-        resized = cv.resize(tree, (2*x_offset,2*y_offset), interpolation = cv.INTER_AREA)
-        try:
-            #superimposes image with transparency
-            alpha_s = resized[:, :, 3] / 255.0
-            alpha_l = 1.0 - alpha_s
-            for c in range(3):
-                img[y_min:y_max,x_min:x_max,c] = (alpha_s * resized[:, :, c] + alpha_l * img[y_min:y_max,x_min:x_max, c])
-        except Exception as ex :
-            print(ex)
 
 
     def rgba_help(self, color, a_val):
@@ -489,7 +515,7 @@ class Data_Interpreter(Thread):
                 self.lookup_table = self.generate_LUT()
 
             elif new_data[0]=="depthBrightness":
-                self.depthBrightness = int(new_data[1])/100
+                self.depthBrightness = int(new_data[1])/1000
 
             elif new_data[0]=="heightlineState":
                 self.heightLineMode = bool(new_data[1])

@@ -4,15 +4,16 @@ class Settings_Manager:
     def __init__(self,main_manager, filepath="config.json", load_standards = True ):
         self.filepath=filepath
         self.main_manager = main_manager
-        self.standard_dict = {"waterlevel":70,
-                         "colorA":(0,150,100,1),
-                         "colorB":(150,240,190,1),
-                         "colorC":(175,230,230,1),
-                         "colorD":(150,200,200,1),
-                         "colorE":(255,230,230,1),
-                         "colorF":(150,200,255,1),
-                         "colorWater":(200,50,0,1),
-                         "colorDeepWater":(250,50,0,1),
+        self.standard_dict = {"waterlevel":50,
+                         "colorA":(150,0,0),
+                         "colorB":(120,0,0),
+                         "colorC":(100,0,0),
+                         "colorD":(80,0,0),
+                         "colorE":(0,220,0),
+                         "colorF":(0,250,0),
+                         "colorWater":(200,0,0),
+                         "colorDeepWater":(250,0,0),
+                         "mainScreenHeight":2160,
                          "mainScreenHeight":2160,
                          "mainScreenWidth":3840,
                          "projectorWidth":1920,
@@ -20,17 +21,17 @@ class Settings_Manager:
                          "markerSize":50,
                          "displayMarkers":1,
                          "refreshRate":1,
-                         "addBrightness":90
+                         "addBrightness":0
                          }
-        self.settings_dict = {"waterlevel":150,
+        self.settings_dict = {"waterlevel":50,
                          "colorA":(0,50,0),
-                         "colorB":(0,100,100),
-                         "colorC":(0,150,100),
-                         "colorD":(0,200,100),
-                         "colorE":(255,230,230),
-                         "colorF":(150,200,255),
-                         "colorWater":(200,50,0),
-                         "colorDeepWater":(250,50,0),
+                         "colorB":(0,100,0),
+                         "colorC":(0,150,0),
+                         "colorD":(0,200,0),
+                         "colorE":(0,220,0),
+                         "colorF":(0,250,0),
+                         "colorWater":(200,0,0),
+                         "colorDeepWater":(250,0,0),
                          "mainScreenHeight":2160,
                          "mainScreenWidth":3840,
                          "projectorWidth":1920,
@@ -38,7 +39,7 @@ class Settings_Manager:
                          "markerSize":100,
                          "displayMarkers":1,
                          "refreshRate":1,
-                         "addBrightness":90
+                         "addBrightness":0
                          }
         if load_standards==True:
            self.write_standards()

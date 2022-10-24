@@ -21,7 +21,7 @@ class Data_Visualizer:
         self.ar3 = cv2.resize(self.ar3,(self.markersize,self.markersize))
         self.output_width=1920
         self.output_height=1080
-        self.brightness_add = 100
+        self.brightness_add = 0
 
     #the main function of the Data_Getter 
     def visualizer_runner(self):

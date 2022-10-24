@@ -40,9 +40,7 @@ class Data_Getter:
         #starts data gathering thread 
         self.runner = Thread(target=self.get_Data)
         self.runner.start()      
-
-
-    #get data gets the depth and RGB data from kinect (or two regular images from a webcam) and puts them into a queue so the data_interpreter can receive them
+        
     def get_Data(self):
         """
         This is the main function of this class. First it checks wether the time is right to send a new image to Data_Interpreter. 
@@ -67,9 +65,12 @@ class Data_Getter:
                     for image in self.image_buffer:
                             depth_frame_temp_filter = self.temporal_filter.process(image)
                     depth_frame = self.hole_filler.process(depth_frame_temp_filter)
+                    #depth_frame = rs.threshold_filter(min_dist = 0.5, max_dist =  4).process(depth_frame) 
                     depth_data = np.asanyarray(depth_frame.get_data())
-                    color_data = np.asanyarray(color_frame.get_data())        
-
+                    color_data = np.asanyarray(color_frame.get_data())   
+                    #cv.waitKey(1)
+                    print("RAW DEPTH MAX",np.max(depth_data))
+                    print("RAW DEPTH MIN", np.min(depth_data))
                     self.output.put_nowait((depth_data,color_data))
 
                 except Exception as ex:
