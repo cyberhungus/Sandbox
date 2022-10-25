@@ -97,14 +97,13 @@ class Data_Interpreter(Thread):
                 else:
                     #starttime = timeit.default_timer()
                     self.findmask(new_data[1])
-                    #print(self.maskpoints)
+
                     self.output.put_nowait(("RAW_RGB",new_data[1]))
-                    #cv.imshow("test",cv.resize(self.four_point_transform(new_data[1],self.maskpoints),(500,500)))
-                    #cv.waitKey(1)
+
                     #depth = self.four_point_transform(new_data[0],self.maskpoints)
                     depth=new_data[0]
-                    print("Average depth is",self.determineAvgDepth(depth))
-                    #self.waterlevel = self.determineAvgDepth(depth)
+
+                    depth = self.applymask(depth)
                     processed_data_depth = self.height_transform_lut(depth)
                     if self.heightLineMode==True:
                         processed_data_depth = self.draw_height_lines(processed_data_depth)
@@ -112,47 +111,12 @@ class Data_Interpreter(Thread):
                     cv.imshow("LUT", Lutvis.showLUT(self.lookup_table))
                     cv.waitKey(1)
                  
-                    self.output.put_nowait(("ANALYZED",self.applymask(full_img)))
+                   
 
-                    
-                    #self.output.put_nowait(("ANALYZED",self.four_point_transform(new_data[0],self.maskpoints)))
-                   # self.output.put_nowait(("ANALYZED",full_img))
+                    self.output.put_nowait(("ANALYZED",full_img))
+
                    # print("Time for color convert algorithm :", timeit.default_timer() - starttime)
 
-
-
-    def four_point_transform(self, image, pts):
-        # obtain a consistent order of the points and unpack them
-        # individually
-        rect = self.sortpoints(pts)
-        (tl, tr, br, bl) = rect
-        # compute the width of the new image, which will be the
-        # maximum distance between bottom-right and bottom-left
-        # x-coordiates or the top-right and top-left x-coordinates
-        widthA = np.sqrt(((br[0] - bl[0]) ** 2) + ((br[1] - bl[1]) ** 2))
-        widthB = np.sqrt(((tr[0] - tl[0]) ** 2) + ((tr[1] - tl[1]) ** 2))
-        maxWidth = max(int(widthA), int(widthB))
-        # compute the height of the new image, which will be the
-        # maximum distance between the top-right and bottom-right
-        # y-coordinates or the top-left and bottom-left y-coordinates
-        heightA = np.sqrt(((tr[0] - br[0]) ** 2) + ((tr[1] - br[1]) ** 2))
-        heightB = np.sqrt(((tl[0] - bl[0]) ** 2) + ((tl[1] - bl[1]) ** 2))
-        maxHeight = max(int(heightA), int(heightB))
-        # now that we have the dimensions of the new image, construct
-        # the set of destination points to obtain a "birds eye view",
-        # (i.e. top-down view) of the image, again specifying points
-        # in the top-left, top-right, bottom-right, and bottom-left
-        # order
-        dst = np.array([
-	        [0, 0],
-	        [maxWidth - 1, 0],
-	        [maxWidth - 1, maxHeight - 1],
-	        [0, maxHeight - 1]], dtype = "float32")
-        # compute the perspective transform matrix and then apply it
-        M = cv.getPerspectiveTransform(rect, dst)
-        warped = cv.warpPerspective(image, M, (maxWidth, maxHeight))
-        # return the warped image
-        return warped
 
 
 
@@ -252,7 +216,8 @@ class Data_Interpreter(Thread):
         """
 
 
-        img = np.ones((1080,1920,3),dtype=np.uint8)
+        img = np.zeros((1080,1920,3),dtype=np.uint8)
+        img[np.where((img == [0,0,0] ).all(axis = 2))] = [255,255,255]
         h, w, c = imgAug.shape
         pts1 = np.array(np.array(self.maskpoints)+(self.firstOffset,self.secondOffset))
         #pts2 = np.float32([[0,0], [w,0], [w,h], [0,h]])
@@ -407,45 +372,46 @@ class Data_Interpreter(Thread):
             #    color_table.append([255,255,255])
 
             #else:
-               
+            if num == 0:
+                color_table.append([0,0,0])
 
+            if num in range(1,int(self.waterlevel/2)):
+                color_table.append(self.colorDeepWater)        
+            elif num in range(int(self.waterlevel/2),self.waterlevel):
+                color_table.append(self.colorWater)
+            elif num in range(int(self.waterlevel),int(self.waterlevel+remainder)):
+                color_table.append(self.make_gradient_color(num, int(self.waterlevel),int(self.waterlevel+remainder),self.colorA,self.colorB)) 
+            elif num in range(int(self.waterlevel+remainder),int(self.waterlevel+remainder*2)):
+                    color_table.append(self.make_gradient_color(num, int(self.waterlevel+remainder*1),int(self.waterlevel+remainder*2),self.colorB,self.colorC))
+            elif num in range(int(self.waterlevel+remainder*2),int(self.waterlevel+remainder*3)):
+                color_table.append(self.make_gradient_color(num, int(self.waterlevel+remainder*2),int(self.waterlevel+remainder*3),self.colorC,self.colorD))   
+            elif num in range(int(self.waterlevel+remainder*3),int(self.waterlevel+remainder*4)):
+                color_table.append(self.make_gradient_color(num, int(self.waterlevel+remainder*3),int(self.waterlevel+remainder*4),self.colorD,self.colorE))    
+            elif num in range(int(self.waterlevel+remainder*4),int(self.waterlevel+remainder*5)):
+                color_table.append(self.make_gradient_color(num, int(self.waterlevel+remainder*4),int(self.waterlevel+remainder*5),self.colorE,self.colorF))  
+            elif num in range(int(self.waterlevel+remainder*5),int(self.waterlevel+remainder*6)):
+                color_table.append(self.colorF)
+            elif num in range(int(self.waterlevel+remainder*6),int(255)):
+                color_table.append(self.colorG)
+            
             #if num in range(0,int(self.waterlevel/2)):
             #    color_table.append(self.colorG)        
             #elif num in range(int(self.waterlevel/2),self.waterlevel):
-            #    color_table.append(self.make_gradient_color(num, int(self.waterlevel/2),int(self.waterlevel),self.colorG, self.colorF))
+            #    color_table.append(self.colorF)
             #elif num in range(int(self.waterlevel),int(self.waterlevel+remainder)):
-            #    color_table.append(self.make_gradient_color(num, int(self.waterlevel),int(self.waterlevel+remainder),self.colorF,self.colorE)) 
+            #    color_table.append(self.colorE)
             #elif num in range(int(self.waterlevel+remainder),int(self.waterlevel+remainder*2)):
-            #        color_table.append(self.make_gradient_color(num, int(self.waterlevel+remainder*1),int(self.waterlevel+remainder*2),self.colorE,self.colorD))
+            #    color_table.append(self.colorD)
             #elif num in range(int(self.waterlevel+remainder*2),int(self.waterlevel+remainder*3)):
-            #    color_table.append(self.make_gradient_color(num, int(self.waterlevel+remainder*2),int(self.waterlevel+remainder*3),self.colorD,self.colorC))   
+            #    color_table.append(self.colorC)
             #elif num in range(int(self.waterlevel+remainder*3),int(self.waterlevel+remainder*4)):
-            #    color_table.append(self.make_gradient_color(num, int(self.waterlevel+remainder*3),int(self.waterlevel+remainder*4),self.colorC,self.colorB))    
+            #    color_table.append(self.colorB) 
             #elif num in range(int(self.waterlevel+remainder*4),int(self.waterlevel+remainder*5)):
-            #    color_table.append(self.make_gradient_color(num, int(self.waterlevel+remainder*4),int(self.waterlevel+remainder*5),self.colorB,self.colorA))  
+            #    color_table.append(self.colorA)
             #elif num in range(int(self.waterlevel+remainder*5),int(self.waterlevel+remainder*6)):
             #    color_table.append(self.colorWater)   
             #elif num in range(int(self.waterlevel+remainder*6),int(255)):
             #    color_table.append(self.colorDeepWater)
-            
-            if num in range(0,int(self.waterlevel/2)):
-                color_table.append(self.colorG)        
-            elif num in range(int(self.waterlevel/2),self.waterlevel):
-                color_table.append(self.colorF)
-            elif num in range(int(self.waterlevel),int(self.waterlevel+remainder)):
-                color_table.append(self.colorE)
-            elif num in range(int(self.waterlevel+remainder),int(self.waterlevel+remainder*2)):
-                color_table.append(self.colorD)
-            elif num in range(int(self.waterlevel+remainder*2),int(self.waterlevel+remainder*3)):
-                color_table.append(self.colorC)
-            elif num in range(int(self.waterlevel+remainder*3),int(self.waterlevel+remainder*4)):
-                color_table.append(self.colorB) 
-            elif num in range(int(self.waterlevel+remainder*4),int(self.waterlevel+remainder*5)):
-                color_table.append(self.colorA)
-            elif num in range(int(self.waterlevel+remainder*5),int(self.waterlevel+remainder*6)):
-                color_table.append(self.colorWater)   
-            elif num in range(int(self.waterlevel+remainder*6),int(255)):
-                color_table.append(self.colorDeepWater)
 
             lookup_table[num,0,0]= color_table[num][0]
             lookup_table[num,0,1]=color_table[num][1]
@@ -487,12 +453,12 @@ class Data_Interpreter(Thread):
     def height_transform_lut(self, data): 
         """Transforms the height data from a Data_Getter Instance into a colour image by using a lookup table."""
       #  data = data.astype(np.uint8)
-        data = cv.convertScaleAbs(data,alpha=self.depthBrightness)
+       # data = cv.convertScaleAbs(data,alpha=self.depthBrightness)
        # print("HEIHGT TRANSFROM SHAPRE ", data.shape, data)
         self.output.put_nowait(("DEPTH_TEST",data))
 
-        data = Image.fromarray(data,"L").convert("RGB")
-        data = np.array(data)
+        #data = Image.fromarray(data,"L").convert("RGB")
+       # data = np.array(data)
 
         return cv.LUT(data,self.lookup_table)
 
@@ -572,6 +538,9 @@ class Data_Interpreter(Thread):
                 self.lookup_table = self.generate_LUT()
             elif new_data[0]=="arrcolorF":
                 self.colorF = (int(new_data[1][2]),int(new_data[1][1]),int(new_data[1][0]))
+                self.lookup_table = self.generate_LUT()
+            elif new_data[0]=="arrcolorG":
+                self.colorG = (int(new_data[1][2]),int(new_data[1][1]),int(new_data[1][0]))
                 self.lookup_table = self.generate_LUT()
             elif new_data[0]=="arrcolorWater":
                 self.colorWater = (int(new_data[1][2]),int(new_data[1][1]),int(new_data[1][0]))

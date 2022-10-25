@@ -35,7 +35,7 @@ class Data_Getter:
         self.device_manager =self.pipeline.start(config)
 
         self.hole_filler = rs.hole_filling_filter(0)
-        self.temporal_filter = rs.temporal_filter()
+        self.temporal_filter = rs.temporal_filter(.001,100,8)
 
         #starts data gathering thread 
         self.runner = Thread(target=self.get_Data)
@@ -59,18 +59,17 @@ class Data_Getter:
                     aligned_frames = self.align.process(frames)
                     color_frame = aligned_frames.first(rs.stream.color)
                     depth_frame = aligned_frames.get_depth_frame()
-                    self.image_buffer.append(depth_frame)
-                    if len(self.image_buffer)>self.interpolation_number:
-                        self.image_buffer.pop(0)
-                    for image in self.image_buffer:
-                            depth_frame_temp_filter = self.temporal_filter.process(image)
+
+                    depth_frame_temp_filter = self.temporal_filter.process(depth_frame)
+                    #depth_frame = self.hole_filler.process(depth_frame)
                     depth_frame = self.hole_filler.process(depth_frame_temp_filter)
                     #depth_frame = rs.threshold_filter(min_dist = 0.5, max_dist =  4).process(depth_frame) 
-                    depth_data = np.asanyarray(depth_frame.get_data())
+
+                    depth_data = np.asanyarray(rs.colorizer(2).colorize(depth_frame).get_data())
                     color_data = np.asanyarray(color_frame.get_data())   
                     #cv.waitKey(1)
-                    print("RAW DEPTH MAX",np.max(depth_data))
-                    print("RAW DEPTH MIN", np.min(depth_data))
+                   # print("RAW DEPTH MAX",np.max(depth_data))
+                   # print("RAW DEPTH MIN", np.min(depth_data))
                     self.output.put_nowait((depth_data,color_data))
 
                 except Exception as ex:

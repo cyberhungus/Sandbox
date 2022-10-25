@@ -1,16 +1,17 @@
 import json
 
 class Settings_Manager:
-    def __init__(self,main_manager, filepath="config.json", load_standards = True ):
+    def __init__(self,main_manager, filepath="config.json", load_standards = False ):
         self.filepath=filepath
         self.main_manager = main_manager
-        self.standard_dict = {"waterlevel":50,
-                         "colorA":(150,0,0),
-                         "colorB":(120,0,0),
-                         "colorC":(100,0,0),
-                         "colorD":(80,0,0),
-                         "colorE":(0,220,0),
-                         "colorF":(0,250,0),
+        self.standard_dict = {"waterlevel":165,
+                         "colorA":(0,100,0),
+                         "colorB":(0,120,0),
+                         "colorC":(0,150,0),
+                         "colorD":(0,150,50),
+                         "colorE":(0,200,50),
+                         "colorF":(0,200,100),
+                         "colorG":(0,200,150),
                          "colorWater":(200,0,0),
                          "colorDeepWater":(250,0,0),
                          "mainScreenHeight":2160,
@@ -21,7 +22,11 @@ class Settings_Manager:
                          "markerSize":50,
                          "displayMarkers":1,
                          "refreshRate":1,
-                         "addBrightness":0
+                         "addBrightness":0,
+                         "xoffset":0,
+                         "yoffset":0
+                         
+
                          }
         self.settings_dict = {"waterlevel":50,
                          "colorA":(0,50,0),
@@ -29,7 +34,8 @@ class Settings_Manager:
                          "colorC":(0,150,0),
                          "colorD":(0,200,0),
                          "colorE":(0,220,0),
-                         "colorF":(0,250,0),
+                         "colorF":(0,240,0),
+                         "colorG":(0,250,0),
                          "colorWater":(200,0,0),
                          "colorDeepWater":(250,0,0),
                          "mainScreenHeight":2160,
@@ -39,7 +45,9 @@ class Settings_Manager:
                          "markerSize":100,
                          "displayMarkers":1,
                          "refreshRate":1,
-                         "addBrightness":0
+                         "addBrightness":0,
+                         "xoffset":0,
+                         "yoffset":0
                          }
         if load_standards==True:
            self.write_standards()
@@ -78,6 +86,7 @@ class Settings_Manager:
             self.settings_dict['colorD']=settings['colorD']
             self.settings_dict['colorE']=settings['colorE']
             self.settings_dict['colorF']=settings['colorF']
+            self.settings_dict['colorG']=settings['colorG']
             self.settings_dict['colorWater']=settings['colorWater']
             self.settings_dict['colorDeepWater']=settings['colorDeepWater']
             self.settings_dict['shapeThreshLow']=settings['shapeThreshLow']

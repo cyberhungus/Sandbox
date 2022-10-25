@@ -15,8 +15,8 @@ class GUI_Manager:
         self.newWindow_status = False
         self.selected_points = []
         self.queue = pipe 
-        self.xoffset = 0
-        self.yoffset = 0
+        self.xoffset = -30
+        self.yoffset = 20
         
     def start_gui(self):
         """
@@ -27,7 +27,7 @@ class GUI_Manager:
         self.label = tk.Label(self.window, text="Sandbox GUI")
         self.label.grid(column=1,row=0)
         self.waterslider = tk.Scale(self.window, from_=0, to=255, command= self.waterSliderMove)
-        self.waterslider.set(50)
+        self.waterslider.set(175)
         self.waterslider.grid(column=0,row=1)
         self.labelWater = tk.Label(self.window, text="Waterlevel")
         self.labelWater.grid(column=0,row=2)
@@ -91,12 +91,15 @@ class GUI_Manager:
         self.colorF =  self.bgr_array_color_hex(self.setting_manager.get_settings()['colorF'])
         self.labelF = tk.Button(self.window,text="Color F",bg=self.colorF, command=lambda: self.choose_Color("arrcolorF"))
         self.labelF.grid(column=3,row=9)
+        self.colorG =  self.bgr_array_color_hex(self.setting_manager.get_settings()['colorG'])
+        self.labelG = tk.Button(self.window,text="Color G",bg=self.colorG, command=lambda: self.choose_Color("arrcolorG"))
+        self.labelG.grid(column=3,row=10)
         self.colorW =  self.bgr_array_color_hex(self.setting_manager.get_settings()['colorWater'])
         self.labelW = tk.Button(self.window,text="Color W",bg=self.colorW, command=lambda: self.choose_Color("arrcolorWater"))
-        self.labelW.grid(column=3,row=10)
+        self.labelW.grid(column=3,row=11)
         self.colorDW =  self.bgr_array_color_hex(self.setting_manager.get_settings()['colorDeepWater'])
         self.labelDW = tk.Button(self.window,text="Color DW",bg=self.colorDW, command=lambda: self.choose_Color("arrcolorDeepWater"))
-        self.labelDW.grid(column=3,row=11)
+        self.labelDW.grid(column=3,row=12)
 
 
         self.xplusone = tk.Button(self.window,text="x+1",  command=lambda: self.x_offset_change(-1))
@@ -136,7 +139,11 @@ class GUI_Manager:
         self.window.after(20,self.refresh_via_queue)
 
         self.window.attributes('-topmost', 'true')
+
+        self.update_ui()
         self.window.mainloop()
+
+
 
     def x_offset_change(self, value):
         """
@@ -285,7 +292,7 @@ class GUI_Manager:
         """
 
         try:
-            return '#%02x%02x%02x' % (array[2], array[1], array[0])
+            return '#%02x%02x%02x' % (array[0], array[1], array[2])
         except:
             return "#000000"
 
@@ -333,9 +340,10 @@ class GUI_Manager:
         :param String param: The name of the color to be changed in the settings manager. 
 
         """
+
         try:
             color_code = colorchooser.askcolor(title ="Choose color")
-            self.setting_manager.alter_setting(param,[round(color_code[0][2]),round(color_code[0][1]),round(color_code[0][0])])
+            self.setting_manager.alter_setting(param,[round(color_code[0][0]),round(color_code[0][1]),round(color_code[0][2])])
             self.update_ui()
         except Exception as ex:
             print("Color chooser closed without selection or error:",ex)
@@ -345,6 +353,8 @@ class GUI_Manager:
         """
         Updates colors and values in the UI. 
         """
+
+        print("Update UI called")
         self.waterslider.set(self.setting_manager.get_settings()['waterlevel'])
         self.colorA =  self.bgr_array_color_hex(self.setting_manager.get_settings()['colorA'])
         self.labelA.config(bg=self.colorA)
@@ -358,6 +368,9 @@ class GUI_Manager:
         self.labelE.config(bg=self.colorE)
         self.colorF =  self.bgr_array_color_hex(self.setting_manager.get_settings()['colorF'])
         self.labelF.config(bg=self.colorF)
+        self.colorG =  self.bgr_array_color_hex(self.setting_manager.get_settings()['colorG'])
+        self.labelG.config(bg=self.colorG)
         self.colorW =  self.bgr_array_color_hex(self.setting_manager.get_settings()['colorWater'])
         self.labelW.config(bg=self.colorW)
+        self.xoffsetLabel.config(text="X-Offset: " + str(self.setting_manager.get_settings()["xoffset"]))
 
