@@ -16,7 +16,7 @@ import frame_convert2 as fc
 #color_correct: Uses the pixels on the top right of the image to set the color of tokens used for AR-functionality 
 class Data_Getter:
 
-    def __init__(self, freq, output_queue_interpreter,manager, resolution = (640,480),color_correct=False ):
+    def __init__(self, freq, output_queue_interpreter, resolution = (640,480),color_correct=False ):
         self.freq = freq
         self.ms_delay = 1000/self.freq 
         print("Capture Delay", self.ms_delay)
@@ -27,10 +27,9 @@ class Data_Getter:
         self.color_correct = color_correct
         self.image_buffer = []
         self.interpolation_number = 10
-        self.manager = manager
+
         #starts data gathering thread 
-        self.runner = Thread(target=self.get_Data)
-        self.runner.start()      
+  
 
     def get_Data(self):
         vid = cv.VideoCapture(0)
@@ -42,6 +41,7 @@ class Data_Getter:
                 info, captured_data = vid.read()
                 if captured_data is not None:
                     output_data_grey = cv.cvtColor(captured_data, cv.COLOR_BGR2GRAY)
+                    output_data_grey = cv.cvtColor(captured_data, cv.COLOR_BGR2RGB)
                     self.output.put_nowait((output_data_grey,captured_data))
                 else:
                     print("Captured Data None")

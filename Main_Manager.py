@@ -1,10 +1,10 @@
 import multiprocessing as mp
-import Data_Getter_Realsense as dg
+import Data_Getter_Camera as dg
 import Data_Interpreter as di
 import Data_Visualizer as dv
 import Settings_Manager as sm 
 import os
-import GUI_Manager as gm
+from pyqtgui import Ui_MainWindow
 from threading import Thread 
 
 #Main Class, start this file to start the program
@@ -14,8 +14,11 @@ class Main_Manager:
         self.FrontendQueue = mp.Queue()
 
         self.Interpreted_Queue = mp.Queue()
-        self.Settings_Manager = sm.Settings_Manager(self)
-        self.Data_Getter = dg.Data_Getter(1,self.Raw_Queue,self)
+
+        self.Data_Getter = dg.Data_Getter(1,self.Raw_Queue)
+
+        self.Getter_Process = mp.Process(target = self.Data_Getter.get_Data)
+        self.Getter_Process.start()
         
 
         self.Data_Interpreter = di.Data_Interpreter(self.Raw_Queue, self.Interpreted_Queue, self.FrontendQueue)
@@ -27,9 +30,9 @@ class Main_Manager:
         self.Visualize_Process.start()
         
         self.latest_color_img = 0
-        self.gui = gm.GUI_Manager(self.Settings_Manager, self.FrontendQueue)
-
-        self.gui.start_gui()
+       # self.Settings_Manager, self.FrontendQueue
+        self.Settings_Manager = sm.Settings_Manager(self)
+        self.gui = Ui_MainWindow(self.Settings_Manager, self.FrontendQueue)
 
         
     #called by settings manager to make alterations to the running subprocesses (i.e. Data Interpreter)
@@ -51,6 +54,3 @@ if __name__ == '__main__':
     m = Main_Manager()
 
         
-        
-
-

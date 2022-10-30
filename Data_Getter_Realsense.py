@@ -13,7 +13,7 @@ import frame_convert2 as fc
 #resulotion: capture resolution for normal camera
 #color_correct: Uses the pixels on the top right of the image to set the color of tokens used for AR-functionality 
 class Data_Getter:
-    def __init__(self, freq, output_queue_interpreter,manager, resolution = (640,480),color_correct=False ):
+    def __init__(self, freq, output_queue_interpreter, resolution = (640,480),color_correct=False ):
         self.freq = freq
         self.ms_delay = 1000/self.freq 
         print("Capture Delay", self.ms_delay)
@@ -24,22 +24,13 @@ class Data_Getter:
         self.color_correct = color_correct
         self.image_buffer = []
         self.interpolation_number = 10
-        self.manager = manager
+       # self.manager = manager
 
         #activated the realsense sensor 
-        self.pipeline = rs.pipeline()       
-        config = rs.config()
-        #use max resolution 
-        config.enable_stream(rs.stream.depth, 1280, 720, rs.format.z16, 30)
-        config.enable_stream(rs.stream.color, 1920,1080, rs.format.bgr8, 15)
-        self.device_manager =self.pipeline.start(config)
-
-        self.hole_filler = rs.hole_filling_filter(0)
-        self.temporal_filter = rs.temporal_filter(.001,100,8)
 
         #starts data gathering thread 
-        self.runner = Thread(target=self.get_Data)
-        self.runner.start()      
+       # self.runner = Thread(target=self.get_Data)
+      #  self.runner.start()      
         
     def get_Data(self):
         """
@@ -49,6 +40,23 @@ class Data_Getter:
 
         
         """
+        self.pipeline = rs.pipeline()       
+        config = rs.config()
+        #use max resolution 
+        pipeline_wrapper = rs.pipeline_wrapper(self.pipeline)
+        pipeline_profile = config.resolve(pipeline_wrapper)
+        device = pipeline_profile.get_device()
+        device_product_line = str(device.get_info(rs.camera_info.product_line))
+        if device_product_line == 'L500':
+            config.enable_stream(rs.stream.depth, 1024,768, rs.format.z16, 30)
+        else:
+            config.enable_stream(rs.stream.depth, 1280, 720, rs.format.z16, 30)
+        config.enable_stream(rs.stream.color, 1920,1080, rs.format.bgr8, 15)
+        self.device_manager =self.pipeline.start(config)
+
+        self.hole_filler = rs.hole_filling_filter(0)
+        self.temporal_filter = rs.temporal_filter(.001,100,8)
+
         while 1:
 
             if self.current_milli_time() > self.next_capture_time:

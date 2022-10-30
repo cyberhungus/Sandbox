@@ -7,6 +7,7 @@ from tkinter import colorchooser
 from PIL import Image, ImageTk
 #class generates a tk inter gui
 import cv2
+import matplotlib
 
 class GUI_Manager:
     def __init__(self, manager, pipe):
@@ -292,8 +293,12 @@ class GUI_Manager:
         """
 
         try:
-            return '#%02x%02x%02x' % (array[0], array[1], array[2])
-        except:
+            print(array)
+            color = '#%02X%02X%02X' % (array[0], array[1], array[2])
+            print(color)
+            return color
+        except Exception as ex:
+            print(ex)
             return "#000000"
 
     def refresh_via_queue(self):
@@ -311,8 +316,8 @@ class GUI_Manager:
                         seenString+=str(item)
                         seenString+="-"
                 except:
-                    print("GUI MARKER TRANSMISSION ER ER")
-
+                    #rint("GUI MARKER TRANSMISSION ER ER")
+                    pass
                 self.markerDisplay.config(text="Markers Seen: "+ seenString)
 
         self.window.after(20,self.refresh_via_queue)
@@ -343,6 +348,7 @@ class GUI_Manager:
 
         try:
             color_code = colorchooser.askcolor(title ="Choose color")
+            print("Color" + str([round(color_code[0][0]),round(color_code[0][1]),round(color_code[0][2])]))
             self.setting_manager.alter_setting(param,[round(color_code[0][0]),round(color_code[0][1]),round(color_code[0][2])])
             self.update_ui()
         except Exception as ex:
@@ -372,5 +378,7 @@ class GUI_Manager:
         self.labelG.config(bg=self.colorG)
         self.colorW =  self.bgr_array_color_hex(self.setting_manager.get_settings()['colorWater'])
         self.labelW.config(bg=self.colorW)
+        self.colorDW =  self.bgr_array_color_hex(self.setting_manager.get_settings()['colorDeepWater'])
+        self.labelDW.config(bg=self.colorDW)
         self.xoffsetLabel.config(text="X-Offset: " + str(self.setting_manager.get_settings()["xoffset"]))
-
+        self.yoffsetLabel.config(text="Y-Offset: " + str(self.setting_manager.get_settings()["yoffset"]))

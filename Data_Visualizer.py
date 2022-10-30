@@ -44,8 +44,10 @@ class Data_Visualizer:
                         self.current_image_full = self.place_ar_corners(self.current_image_full)
                 elif current_data[0]=="RAW_RGB":
                     self.current_image_rgb_raw = current_data[1]
+
                 elif current_data[0]=="DEPTH_TEST":
                     self.depth_control = current_data[1]
+                    
                 elif current_data[0]=="SHOW_MARKERS":
                     self.markerMode = bool(current_data[1])
                 elif current_data[0]=="MARKER_SIZE":
@@ -61,6 +63,7 @@ class Data_Visualizer:
                 elif current_data[0]=="BRIGHTNESS":
                     self.brightness_add = int(current_data[1])
                 try:
+
                     cv2.namedWindow("OUTPUT_FULLSCREEN", cv2.WND_PROP_FULLSCREEN)
                     cv2.moveWindow("OUTPUT_FULLSCREEN", 3840,0)
                     cv2.setWindowProperty("OUTPUT_FULLSCREEN",cv2.WND_PROP_FULLSCREEN,cv2.WINDOW_FULLSCREEN)
