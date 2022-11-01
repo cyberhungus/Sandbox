@@ -1,22 +1,21 @@
 
-from fileinput import filename
-from this import s
-from typing_extensions import Self
+
 from PyQt5 import QtCore, QtGui, QtWidgets
 from SerialConnector import SerialConnector
 
 import sys
 import os
 from PyQt5.QtWidgets import QApplication, QWidget
-from PyQt5.QtCore import QObject, QThread, pyqtSignal  
+from PyQt5.QtCore import QObject, QThread, pyqtSignal
 from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QColorDialog, QFileDialog
-from PyQt5.QtGui import QIcon
+from PyQt5.QtGui import QIcon , QColor 
 from PIL import Image
 from PyQt5 import QtWidgets, QtGui
 
 from PIL import Image, ImageQt
 import numpy as np
 import cv2 as cv
+
 
 class Ui_MainWindow(object):
 
@@ -29,6 +28,18 @@ class Ui_MainWindow(object):
         self.xoffset = -30
         self.yoffset = 20
         self.serial = SerialConnector()
+
+        self.imgmode = True
+
+
+        self.upperRow = []
+        self.lowerRow = []
+        
+        self.rowOffset = 200
+        self.number_leds = 10 
+
+
+
         app = QApplication(sys.argv)
         window = QWidget()
         self.setupUi(window)
@@ -251,24 +262,27 @@ class Ui_MainWindow(object):
         self.worker.finished.connect(self.worker.deleteLater)
         self.thread.finished.connect(self.thread.deleteLater)
         self.worker.progress.connect(self.reportMarkers)
-        self.worker.RGBimage.connect(self.receiveRGBImage)
-        self.worker.Depthimage.connect(self.receiveDepthImage)
-        self.worker.Fullimage.connect(self.receiveFullImage)
+        self.worker.image.connect(self.receiveRGBImage)
         self.thread.start()
 
-    def receiveRGBImage(self, img):
-        
-        self.RGBGraphicView.setPixmap(img)
-        self.RGBGraphicView.show()
 
-    def receiveDepthImage(self, img):
-        
-        self.DepthGraphicView.setPixmap(img)
-        self.DepthGraphicView.show()
-    def receiveFullImage(self, img):
-        
-        self.OutputGraphicView.setPixmap(img)
-        self.OutputGraphicView.show()
+    def receiveRGBImage(self, img):
+        self.upperRow = []
+        self.lowerRow = []
+        if self.imgmode == True:
+            for led in range(0,self.number_leds):
+                try:
+                    w, h , d = img.shape
+                    upColor = img[int((w/self.number_leds)*led)][int(self.rowOffset)]
+                    self.upperRow.append(upColor)
+                    downColor =  img[int((w/self.number_leds)*led)][int(h-self.rowOffset)]
+                    self.lowerRow.append(downColor)
+                    if self.serial.serialStarted == True:
+                        self.serial.sendLightMessage(led,blue= upColor[1], red=upColor[0], green= upColor[2])
+                        self.serial.sendLightMessage(led+self.number_leds,blue= upColor[1], red=upColor[0], green= upColor[2])
+                except Exception as ex:
+                    print("Catch" , ex)
+
 
     def reportMarkers(self, value):
         if type(value)==type("String"):
@@ -338,7 +352,7 @@ class Ui_MainWindow(object):
 
     
     def FPSchanged(self, value):
-        print("FPS Change" , value)
+       # print("FPS Change" , value)
         self.setting_manager.alter_setting("refreshRate",value)
         self.RefreshLabel.setText(str(value))
 
@@ -442,7 +456,7 @@ class Ui_MainWindow(object):
         self.WaterLevelSlider.setValue(value)
 
         value = set_dict.get("refreshRate")
-        print("refresh", value)
+      #  print("refresh", value)
         self.RefreshSlider.setValue(value)
 
         value = set_dict.get("xoffset")
@@ -467,13 +481,14 @@ class Ui_MainWindow(object):
         except:
             return "#000000"
 
+
+
 class PipeWorker(QObject):
 
     finished = pyqtSignal()    
     progress = pyqtSignal(str)
-    RGBimage = pyqtSignal(QtGui.QPixmap)
-    Depthimage = pyqtSignal(QtGui.QPixmap)
-    Fullimage = pyqtSignal(QtGui.QPixmap)
+    image = pyqtSignal(np.ndarray)
+
 
 
 
@@ -484,7 +499,7 @@ class PipeWorker(QObject):
         while 1:
             if not self.queue.empty():
                 rec = self.queue.get_nowait()
-                print("qt gui received", rec)
+               # print("qt gui received", rec)
                 if rec[0] == "FOUNDMARKERS":
                     seenString =""
                     try:
@@ -494,42 +509,13 @@ class PipeWorker(QObject):
                             self.progress.emit(seenString)
                     except:
                         pass
-                elif rec[0] == "RGB":
-                    try:
-                        array = rec[1]
 
-                       # array = cv.resize(array,(400,400))
-                        img = Image.fromarray(array, mode='RGB')
-                        qt_img = ImageQt.ImageQt(img)
-                        qt_pix = QtGui.QPixmap.fromImage(qt_img)
-                        
-                        self.RGBimage.emit(qt_pix)
-                    except Exception as ex:
-                        print(ex)
-                        pass
-                elif rec[0] == "DEPTH":
-                    try:
-                        array = rec[1]
-
-                       # array = cv.resize(array,(400,400))
-                        img = Image.fromarray(array, mode='RGB')
-                        qt_img = ImageQt.ImageQt(img)
-                        qt_pix = QtGui.QPixmap.fromImage(qt_img)
-                        
-                        self.Depthimage.emit(qt_pix)
-                    except Exception as ex:
-                        print(ex)
-                        pass
                 elif rec[0] == "FULL":
                     try:
                         array = rec[1]
 
-                       # array = cv.resize(array,(400,400))
-                        img = Image.fromarray(array, mode='RGB')
-                        qt_img = ImageQt.ImageQt(img)
-                        qt_pix = QtGui.QPixmap.fromImage(qt_img)
-                        
-                        self.Fullimage.emit(qt_pix)
+
+                        self.image.emit(array)
                     except Exception as ex:
                         print(ex)
                         pass

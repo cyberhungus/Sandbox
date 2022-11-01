@@ -6,7 +6,7 @@ from threading import Thread
 import time as t 
 import numpy as np
 import frame_convert2 as fc
-
+import Data_Visualizer
 
 
 #freq = how many refreshes per second
@@ -42,6 +42,8 @@ class Data_Getter:
                 if captured_data is not None:
                     output_data_grey = cv.cvtColor(captured_data, cv.COLOR_BGR2GRAY)
                     output_data_grey = cv.cvtColor(captured_data, cv.COLOR_BGR2RGB)
+                    captured_data = Data_Visualizer.Data_Visualizer(None).place_ar_corners(captured_data)
+
                     self.output.put_nowait((output_data_grey,captured_data))
                 else:
                     print("Captured Data None")

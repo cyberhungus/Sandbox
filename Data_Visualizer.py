@@ -8,7 +8,7 @@ class Data_Visualizer:
         self.input = inputQueue
         self.current_image_full = 0 
         self.current_image_rgb_raw = 0 
-        self.depth_control = 0
+        self.current_image_depth = 0
         self.markerMode = placemarkers
         self.markersize = 100
         self.ar0 = cv2.imread("ar0.png",cv2.IMREAD_COLOR)
@@ -44,10 +44,8 @@ class Data_Visualizer:
                         self.current_image_full = self.place_ar_corners(self.current_image_full)
                 elif current_data[0]=="RAW_RGB":
                     self.current_image_rgb_raw = current_data[1]
-
-                elif current_data[0]=="DEPTH_TEST":
-                    self.depth_control = current_data[1]
-                    
+                elif current_data[0]=="DEPTH":
+                    self.current_image_depth = current_data[1]
                 elif current_data[0]=="SHOW_MARKERS":
                     self.markerMode = bool(current_data[1])
                 elif current_data[0]=="MARKER_SIZE":
@@ -65,12 +63,12 @@ class Data_Visualizer:
                 try:
 
                     cv2.namedWindow("OUTPUT_FULLSCREEN", cv2.WND_PROP_FULLSCREEN)
-                    cv2.moveWindow("OUTPUT_FULLSCREEN", 3840,0)
+                  #  cv2.moveWindow("OUTPUT_FULLSCREEN", 3840,0)
                     cv2.setWindowProperty("OUTPUT_FULLSCREEN",cv2.WND_PROP_FULLSCREEN,cv2.WINDOW_FULLSCREEN)
                     cv2.imshow("OUTPUT_FULLSCREEN",self.current_image_full)
                     cv2.imshow("OUTPUT_CONTROL",cv2.resize(self.current_image_full,(400,400)))
                     cv2.imshow("RGB_Control",cv2.resize(self.current_image_rgb_raw,(400,400)))
-                    cv2.imshow("Depth_Control",cv2.resize(self.depth_control,(400,400)))
+                    cv2.imshow("Depth_Control",cv2.resize(self.current_image_depth,(400,400)))
                     cv2.moveWindow("RGB_Control", 800,0)
                     cv2.moveWindow("Depth_Control", 400,0)
                     cv2.moveWindow("OUTPUT_CONTROL", 0,0)

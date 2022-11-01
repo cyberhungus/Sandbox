@@ -21,7 +21,7 @@ class Settings_Manager:
                          "projectorHeight":1080, 
                          "markerSize":100,
                          "displayMarkers":1,
-                         "refreshRate":1,
+                         "refreshRate":5,
                          "addBrightness":0,
                          "xoffset":0,
                          "yoffset":0

@@ -49,6 +49,7 @@ class Data_Getter:
         device_product_line = str(device.get_info(rs.camera_info.product_line))
         if device_product_line == 'L500':
             config.enable_stream(rs.stream.depth, 1024,768, rs.format.z16, 30)
+            print("L500 detected")
         else:
             config.enable_stream(rs.stream.depth, 1280, 720, rs.format.z16, 30)
         config.enable_stream(rs.stream.color, 1920,1080, rs.format.bgr8, 15)

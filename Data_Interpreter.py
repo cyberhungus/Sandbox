@@ -98,9 +98,9 @@ class Data_Interpreter(Thread):
                     #starttime = timeit.default_timer()
                     self.findmask(new_data[1])
 
-                    #self.output.put_nowait(("RAW_RGB",new_data[1]))
-                    self.queue.put_nowait(("RGB",new_data[0]))
-                    self.queue.put_nowait(("DEPTH",new_data[1]))
+                    self.output.put_nowait(("RAW_RGB",new_data[1]))
+                   # self.queue.put_nowait(("RGB",new_data[0]))
+                   # self.queue.put_nowait(("DEPTH",new_data[1]))
                     #depth = self.four_point_transform(new_data[0],self.maskpoints)
                     depth=new_data[0]
 
@@ -110,8 +110,8 @@ class Data_Interpreter(Thread):
                     if self.heightLineMode==True:
                         processed_data_depth = self.draw_height_lines(processed_data_depth)
                     full_img = self.process_aruco(new_data[1],processed_data_depth)
-                    cv.imshow("LUT", Lutvis.showLUT(self.lookup_table))
-                    cv.waitKey(1)
+                   # cv.imshow("LUT", Lutvis.showLUT(self.lookup_table))
+                    #cv.waitKey(1)
                  
                    
                     self.queue.put_nowait(("FULL",full_img))
@@ -220,7 +220,6 @@ class Data_Interpreter(Thread):
         img[np.where((img == [0,0,0] ).all(axis = 2))] = [255,255,255]
         h, w, c = imgAug.shape
         pts1 = np.array(np.array(self.maskpoints)+(self.firstOffset,self.secondOffset))
-        #pts2 = np.float32([[0,0], [w,0], [w,h], [0,h]])
         pts2 = np.float32([[0,0], [w,0], [w,h], [0,h]])
         matrix, _ = cv.findHomography(pts1, pts2)
         imgout = cv.warpPerspective(imgAug, matrix, (img.shape[1], img.shape[0]))
@@ -347,8 +346,7 @@ class Data_Interpreter(Thread):
         upper = int(min(255, (mean + sigma)))
 
         edge = cv.Canny(blur, lower, upper)
-        cv.imshow("canny", cv.resize(edge,(300,300)))
-        cv.waitKey(1)
+
         try:
             data = data_lut.copy()
 
@@ -357,8 +355,7 @@ class Data_Interpreter(Thread):
 
             line_pixels = canny[:,:]>0
             data[line_pixels]=self.lineBrown
-            #cv.imshow("canny", cv.resize(canny,(300,300)))
-            #cv.waitKey(1)
+
             return data
         except Exception as ex:
             print("Canny Error",ex)
@@ -381,36 +378,6 @@ class Data_Interpreter(Thread):
         remainder = (256-self.waterlevel)/6
         for num in range(256):
 
-
-
-            #if num < self.heightrangeLOW:
-            #    color_table.append([0,0,0])
-
-            #elif num > self.heightrangeHIGH:
-            #    color_table.append([255,255,255])
-
-            #else:
-            #if num == 0:
-            #    color_table.append([0,0,0])
-
-            #if num in range(1,int(self.waterlevel/2)):
-            #    color_table.append(self.colorDeepWater)        
-            #elif num in range(int(self.waterlevel/2),self.waterlevel):
-            #    color_table.append(self.colorWater)
-            #elif num in range(int(self.waterlevel),int(self.waterlevel+remainder)):
-            #    color_table.append(self.make_gradient_color(num, int(self.waterlevel),int(self.waterlevel+remainder),self.colorA,self.colorB)) 
-            #elif num in range(int(self.waterlevel+remainder),int(self.waterlevel+remainder*2)):
-            #        color_table.append(self.make_gradient_color(num, int(self.waterlevel+remainder*1),int(self.waterlevel+remainder*2),self.colorB,self.colorC))
-            #elif num in range(int(self.waterlevel+remainder*2),int(self.waterlevel+remainder*3)):
-            #    color_table.append(self.make_gradient_color(num, int(self.waterlevel+remainder*2),int(self.waterlevel+remainder*3),self.colorC,self.colorD))   
-            #elif num in range(int(self.waterlevel+remainder*3),int(self.waterlevel+remainder*4)):
-            #    color_table.append(self.make_gradient_color(num, int(self.waterlevel+remainder*3),int(self.waterlevel+remainder*4),self.colorD,self.colorE))    
-            #elif num in range(int(self.waterlevel+remainder*4),int(self.waterlevel+remainder*5)):
-            #    color_table.append(self.make_gradient_color(num, int(self.waterlevel+remainder*4),int(self.waterlevel+remainder*5),self.colorE,self.colorF))  
-            #elif num in range(int(self.waterlevel+remainder*5),int(self.waterlevel+remainder*6)):
-            #    color_table.append(self.colorF)
-            #elif num in range(int(self.waterlevel+remainder*6),int(255)):
-            #    color_table.append(self.colorG)
             
             if num in range(0,int(self.waterlevel/2)):
                 color_table.append(self.colorDeepWater)        
@@ -473,11 +440,7 @@ class Data_Interpreter(Thread):
       #  data = data.astype(np.uint8)
        # data = cv.convertScaleAbs(data,alpha=self.depthBrightness)
        # print("HEIHGT TRANSFROM SHAPRE ", data.shape, data)
-       # self.output.put_nowait(("DEPTH_TEST",data))
-
-        #data = Image.fromarray(data,"L").convert("RGB")
-       # data = np.array(data)
-
+        self.output.put_nowait(("DEPTH",data))
         return cv.LUT(data,self.lookup_table)
 
 

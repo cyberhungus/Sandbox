@@ -7,11 +7,12 @@ import sys
 
 
 class SerialConnector:
-    def __init__(self,port='COM17',baud=2000000, ):
+    def __init__(self,port='COM17',baud=115200):
         self.port = port
         self.baud = baud
         self.serialStarted = False
         self.ser = None
+        
     
     def getAvailableComPorts(self):
         ports = ['COM%s' % (i + 1) for i in range(256)]
@@ -46,12 +47,17 @@ class SerialConnector:
         self.readThread.start()
 
     def receive(self):
-        while 1:
-            
-            bytes = self.ser.read(self.ser.inWaiting())
-            if len(bytes)>0:
-                print("Arduino is sending:", bytes)
-            sleep(0.01)
+        while 1 and self.serialStarted == True:
+            try:
+                bytes = self.ser.read(self.ser.inWaiting())
+                if len(bytes)>0:
+                    print("Arduino is sending:", bytes)
+                sleep(0.01)
+            except:
+                self.serialStarted = False
+                self.ser.close()
+                
+                print("Exception with serial port")
 
     def send(self, msg):
         try:
