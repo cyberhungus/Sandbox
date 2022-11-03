@@ -1,6 +1,10 @@
 {
   "ExpandedNodes": [
-    ""
+    "",
+    "\\build",
+    "\\build\\Main_Manager",
+    "\\dist",
+    "\\dist\\Main_Manager"
   ],
   "PreviewInSolutionExplorer": false
 }

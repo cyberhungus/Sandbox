@@ -15,6 +15,7 @@ from PyQt5 import QtWidgets, QtGui
 from PIL import Image, ImageQt
 import numpy as np
 import cv2 as cv
+from time import sleep
 
 
 class Ui_MainWindow(object):
@@ -36,7 +37,7 @@ class Ui_MainWindow(object):
         self.lowerRow = []
         
         self.rowOffset = 200
-        self.number_leds = 10 
+        self.number_leds = 27
 
 
 
@@ -270,16 +271,18 @@ class Ui_MainWindow(object):
         self.upperRow = []
         self.lowerRow = []
         if self.imgmode == True:
-            for led in range(0,self.number_leds):
+            for led in range(0,self.number_leds+1):
                 try:
                     w, h , d = img.shape
                     upColor = img[int((w/self.number_leds)*led)][int(self.rowOffset)]
                     self.upperRow.append(upColor)
-                    downColor =  img[int((w/self.number_leds)*led)][int(h-self.rowOffset)]
-                    self.lowerRow.append(downColor)
+                   # downColor =  img[int((w/self.number_leds)*led)][int(h-self.rowOffset)]
+                 #   self.lowerRow.append(downColor)
                     if self.serial.serialStarted == True:
-                        self.serial.sendLightMessage(led,blue= upColor[1], red=upColor[0], green= upColor[2])
-                        self.serial.sendLightMessage(led+self.number_leds,blue= upColor[1], red=upColor[0], green= upColor[2])
+                       # print(led)
+                        self.serial.sendLightMessage(led,upColor[2], upColor[1], upColor[0])
+                        sleep(0.005)
+                      #  self.serial.sendLightMessage(led+self.number_leds,blue= upColor[1], red=upColor[0], green= upColor[2])
                 except Exception as ex:
                     print("Catch" , ex)
 

@@ -7,7 +7,7 @@ import sys
 
 
 class SerialConnector:
-    def __init__(self,port='COM17',baud=115200):
+    def __init__(self,port='COM9',baud=115200):
         self.port = port
         self.baud = baud
         self.serialStarted = False
@@ -81,7 +81,8 @@ class SerialConnector:
                 sleep(0.1)
             #the message needs to be in this format to be recognizable to the arduino 
             # then actually send the message to the arduino 
-            message = str("{0:03}".format(red))+"-"+str("{0:03}".format(green))+"-"+str("{0:03}".format(blue))+"-"+str("{0:03}".format(lednum))
+            message ="<"+ str("{0:03}".format(red))+"-"+str("{0:03}".format(green))+"-"+str("{0:03}".format(blue))+"-"+str("{0:03}".format(lednum))+">"
+            #print("Light message",message)
             self.ser.write(bytes(message,"ASCII"))
         except Exception as ex:
             print("SerialConnector:" , ex)

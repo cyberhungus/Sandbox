@@ -224,16 +224,6 @@ class Data_Interpreter(Thread):
        # pts2 = np.float32([[0,0], [w,0], [w,h], [0,h]])
         pts2 = np.float32([[0,0], [h,0], [h,w], [0,w]])
 
-        for pt in pts2[0]:
-            try:
-                print(pt)
-                cv.circle(imgAug, (int(pt[0]),int(pt[1])),10, (255,0,0), 3)
-            except Exception as ex:
-                print(ex)
-
-        cv.imshow("DEPTH TEST", cv.resize(imgAug, (400,400)))
-        cv.waitKey(1)
-
         matrix, _ = cv.findHomography(pts1, pts2)
         imgout = cv.warpPerspective(imgAug, matrix, (img.shape[1], img.shape[0]))
        # cv.fillConvexPoly(img, pts1.astype(int), (0, 0, 0))
@@ -252,6 +242,7 @@ class Data_Interpreter(Thread):
 
         """
         img = img_rgb.copy()
+        img = self.applymask(img)
         new_img=img_depth
         arucofound = self.findArucoMarkers(img)
         if arucofound:
@@ -261,7 +252,7 @@ class Data_Interpreter(Thread):
                     if id not in range(0,4):
                         print("Proces Aruco" , bbox,id)
                         if id == 10 :   
-                            new_img = self.arucoAug(bbox, new_img, self.houseIMG, expandSize=0)
+                            new_img = self.arucoAug(bbox, new_img, self.houseIMG, expandSize=50)
                         elif id == 9:
                             new_img = self.arucoAug(bbox, new_img, self.gardenIMG, expandSize= 40)
                 return new_img
