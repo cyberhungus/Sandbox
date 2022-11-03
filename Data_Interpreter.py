@@ -300,7 +300,8 @@ class Data_Interpreter(Thread):
         bl = bbox[0][3][0]-expandSize, bbox[0][3][1]+expandSize
         h, w, c = imgAug.shape
         pts1 = np.array([tl, tr, br, bl])
-        pts2 = np.float32([[0,0], [w,0], [w,h], [0,h]])
+       # pts2 = np.float32([[0,0], [w,0], [w,h], [0,h]])
+        pts2 = np.float32([[0,0], [h,0], [h,w], [0,w]])
         matrix, _ = cv.findHomography(pts2, pts1)
         imgout = cv.warpPerspective(imgAug, matrix, (img.shape[1], img.shape[0]))
         cv.fillConvexPoly(img, pts1.astype(int), (0, 0, 0))
