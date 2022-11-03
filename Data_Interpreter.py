@@ -154,7 +154,7 @@ class Data_Interpreter(Thread):
         self.maskpoints = []
         arucofound = self.findArucoMarkers(img)
         if arucofound:
-            if len(arucofound[0])>=4:
+            if len(arucofound[0])>=4 and (x in [0,1,2,3] for x in arucofound[1]):
                 print(arucofound[1])
                 for bbox, codeID in zip(arucofound[0], arucofound[1]):
                     
@@ -300,7 +300,7 @@ class Data_Interpreter(Thread):
         bl = bbox[0][3][0]-expandSize, bbox[0][3][1]+expandSize
         h, w, c = imgAug.shape
         pts1 = np.array([tl, tr, br, bl])-(self.firstOffset,self.secondOffset)
-      #  pts1 = np.array([bl, tl, br, tr])
+
        # pts2 = np.float32([[0,0], [w,0], [w,h], [0,h]])
         pts2 = np.float32([[0,0], [h,0], [h,w], [0,w]])
         matrix, _ = cv.findHomography(pts2, pts1)

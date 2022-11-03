@@ -276,13 +276,13 @@ class Ui_MainWindow(object):
                     w, h , d = img.shape
                     upColor = img[int((w/self.number_leds)*led)][int(self.rowOffset)]
                     self.upperRow.append(upColor)
-                   # downColor =  img[int((w/self.number_leds)*led)][int(h-self.rowOffset)]
-                 #   self.lowerRow.append(downColor)
+                    downColor =  img[int((w/self.number_leds)*led)][int(h-self.rowOffset)]
+                    self.lowerRow.append(downColor)
                     if self.serial.serialStarted == True:
                        # print(led)
                         self.serial.sendLightMessage(led,upColor[2], upColor[1], upColor[0])
                         sleep(0.005)
-                      #  self.serial.sendLightMessage(led+self.number_leds,blue= upColor[1], red=upColor[0], green= upColor[2])
+                        self.serial.sendLightMessage(led+self.number_leds,blue= upColor[1], red=upColor[0], green= upColor[2])
                 except Exception as ex:
                     print("Catch" , ex)
 
