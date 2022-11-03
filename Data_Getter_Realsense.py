@@ -13,7 +13,7 @@ import frame_convert2 as fc
 #resulotion: capture resolution for normal camera
 #color_correct: Uses the pixels on the top right of the image to set the color of tokens used for AR-functionality 
 class Data_Getter:
-    def __init__(self, freq, output_queue_interpreter, resolution = (640,480),color_correct=False ):
+    def __init__(self, freq, output_queue_interpreter, resolution = (640,480)):
         self.freq = freq
         self.ms_delay = 1000/self.freq 
         print("Capture Delay", self.ms_delay)
@@ -21,7 +21,7 @@ class Data_Getter:
 
         self.next_capture_time = 0 
         self.resolution = resolution 
-        self.color_correct = color_correct
+
         self.image_buffer = []
         self.interpolation_number = 10
        # self.manager = manager
@@ -75,9 +75,10 @@ class Data_Getter:
                     #depth_frame = rs.threshold_filter(min_dist = 0.5, max_dist =  4).process(depth_frame) 
 
                     depth_data = np.asanyarray(rs.colorizer(2).colorize(depth_frame).get_data())
-                    color_data = np.asanyarray(color_frame.get_data())   
-                    #cv.waitKey(1)
-                   # print("RAW DEPTH MAX",np.max(depth_data))
+                    color_data = np.asanyarray(color_frame.get_data())  
+
+                    depth_data = cv.rotate(depth_data, cv.ROTATE_90_COUNTERCLOCKWISE)
+                    color_data = cv.rotate(color_data, cv.ROTATE_90_COUNTERCLOCKWISE)
                    # print("RAW DEPTH MIN", np.min(depth_data))
                     self.output.put_nowait((depth_data,color_data))
 

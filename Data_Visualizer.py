@@ -10,7 +10,7 @@ class Data_Visualizer:
         self.current_image_rgb_raw = 0 
         self.current_image_depth = 0
         self.markerMode = placemarkers
-        self.markersize = 100
+        self.markersize = 250
         self.ar0 = cv2.imread("ar0.png",cv2.IMREAD_COLOR)
         self.ar0 = cv2.resize(self.ar0,(self.markersize,self.markersize))
         self.ar1 = cv2.imread("ar1.png",cv2.IMREAD_COLOR)
@@ -52,12 +52,16 @@ class Data_Visualizer:
                     self.markersize=int(current_data[1])
                     self.ar0 = cv2.imread("ar0.png",cv2.IMREAD_COLOR)
                     self.ar0 = cv2.resize(self.ar0,(self.markersize,self.markersize))
+                    self.ar0 = cv2.rotate(self.ar0, cv2.ROTATE_90_COUNTERCLOCKWISE)
                     self.ar1 = cv2.imread("ar1.png",cv2.IMREAD_COLOR)
                     self.ar1 = cv2.resize(self.ar1,(self.markersize,self.markersize))
+                    self.ar1 = cv2.rotate(self.ar1, cv2.ROTATE_90_COUNTERCLOCKWISE)
                     self.ar2 = cv2.imread("ar2.png",cv2.IMREAD_COLOR)
                     self.ar2 = cv2.resize(self.ar2,(self.markersize,self.markersize))
+                    self.ar2 = cv2.rotate(self.ar2, cv2.ROTATE_90_COUNTERCLOCKWISE)
                     self.ar3 = cv2.imread("ar3.png",cv2.IMREAD_COLOR)
                     self.ar3 = cv2.resize(self.ar3,(self.markersize,self.markersize))
+                   # self.ar3 = cv2.rotate(self.ar3, cv2.ROTATE_90_COUNTERCLOCKWISE)
                 elif current_data[0]=="BRIGHTNESS":
                     self.brightness_add = int(current_data[1])
                 try:

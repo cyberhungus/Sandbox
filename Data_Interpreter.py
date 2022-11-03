@@ -102,6 +102,7 @@ class Data_Interpreter(Thread):
                    # self.queue.put_nowait(("RGB",new_data[0]))
                    # self.queue.put_nowait(("DEPTH",new_data[1]))
                     #depth = self.four_point_transform(new_data[0],self.maskpoints)
+
                     depth=new_data[0]
 
                     depth = self.applymask(depth)
@@ -220,7 +221,19 @@ class Data_Interpreter(Thread):
         img[np.where((img == [0,0,0] ).all(axis = 2))] = [255,255,255]
         h, w, c = imgAug.shape
         pts1 = np.array(np.array(self.maskpoints)+(self.firstOffset,self.secondOffset))
-        pts2 = np.float32([[0,0], [w,0], [w,h], [0,h]])
+       # pts2 = np.float32([[0,0], [w,0], [w,h], [0,h]])
+        pts2 = np.float32([[0,0], [h,0], [h,w], [0,w]])
+
+        for pt in pts2[0]:
+            try:
+                print(pt)
+                cv.circle(imgAug, (int(pt[0]),int(pt[1])),10, (255,0,0), 3)
+            except Exception as ex:
+                print(ex)
+
+        cv.imshow("DEPTH TEST", cv.resize(imgAug, (400,400)))
+        cv.waitKey(1)
+
         matrix, _ = cv.findHomography(pts1, pts2)
         imgout = cv.warpPerspective(imgAug, matrix, (img.shape[1], img.shape[0]))
        # cv.fillConvexPoly(img, pts1.astype(int), (0, 0, 0))
