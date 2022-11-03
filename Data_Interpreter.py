@@ -294,20 +294,24 @@ class Data_Interpreter(Thread):
         
         
         """
-        tl = bbox[0][0][0]-expandSize, bbox[0][0][1]-expandSize
-        tr = bbox[0][1][0]+expandSize, bbox[0][1][1]-expandSize
-        br = bbox[0][2][0]+expandSize, bbox[0][2][1]+expandSize
-        bl = bbox[0][3][0]-expandSize, bbox[0][3][1]+expandSize
-        h, w, c = imgAug.shape
-        pts1 = np.array([tl, tr, br, bl])-(self.firstOffset,self.secondOffset)
+        try:
+            tl = bbox[0][0][0]-expandSize, bbox[0][0][1]-expandSize
+            tr = bbox[0][1][0]+expandSize, bbox[0][1][1]-expandSize
+            br = bbox[0][2][0]+expandSize, bbox[0][2][1]+expandSize
+            bl = bbox[0][3][0]-expandSize, bbox[0][3][1]+expandSize
+            h, w, c = imgAug.shape
+            pts1 = np.array([tl, tr, br, bl])-(self.firstOffset,self.secondOffset)
 
-       # pts2 = np.float32([[0,0], [w,0], [w,h], [0,h]])
-        pts2 = np.float32([[0,0], [h,0], [h,w], [0,w]])
-        matrix, _ = cv.findHomography(pts2, pts1)
-        imgout = cv.warpPerspective(cv.rotate(imgAug, cv.ROTATE_90_COUNTERCLOCKWISE), matrix, (img.shape[1], img.shape[0]))
-        cv.fillConvexPoly(img, pts1.astype(int), (0, 0, 0))
-        imgout = img + imgout
-        return imgout
+           # pts2 = np.float32([[0,0], [w,0], [w,h], [0,h]])
+            pts2 = np.float32([[0,0], [h,0], [h,w], [0,w]])
+            matrix, _ = cv.findHomography(pts2, pts1)
+            imgout = cv.warpPerspective(cv.rotate(imgAug, cv.ROTATE_90_COUNTERCLOCKWISE), matrix, (img.shape[1], img.shape[0]))
+            cv.fillConvexPoly(img, pts1.astype(int), (0, 0, 0))
+            imgout = img + imgout
+            return imgout
+        except Exception as ex:
+            print(ex)
+            return img
 
     def calc_middle(self, points):
         """Determines the middle of either an aruco marker, or any number of points.
