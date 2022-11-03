@@ -50,6 +50,12 @@ class Data_Interpreter(Thread):
         filepath = os.getcwd()+"/assets/garten.png"
         self.gardenIMG = cv.imread(filepath,cv.IMREAD_COLOR)
 
+        filepath = os.getcwd()+"/assets/okshlogo.png"
+        self.logoIMG = cv.imread(filepath,cv.IMREAD_COLOR)
+
+        
+        filepath = os.getcwd()+"/assets/asphalt.png"
+        self.asphaltIMG = cv.imread(filepath,cv.IMREAD_COLOR)
 
         filepath = os.getcwd()+"/assets/tree.png"
         self.treeIMG = cv.imread(filepath,cv.IMREAD_UNCHANGED)
@@ -255,6 +261,10 @@ class Data_Interpreter(Thread):
                             new_img = self.arucoAug(bbox, new_img, self.houseIMG, expandSize=50)
                         elif id == 9:
                             new_img = self.arucoAug(bbox, new_img, self.gardenIMG, expandSize= 40)
+                        elif id == 8 :   
+                            new_img = self.arucoAug(bbox, new_img, self.logoIMG, expandSize=50)
+                        elif id == 7 :   
+                            new_img = self.arucoAug(bbox, new_img, self.houseIMG, expandSize=50)
                 return new_img
             else:
                 return new_img
