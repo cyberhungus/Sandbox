@@ -8,7 +8,7 @@ from PIL import Image, ImageFilter
 import cv2 as cv
 import cv2.aruco as aruco
 import timeit
-import imutils as imu
+
 import os
 from Object_Manager import Tree_Manager as tm
 import LookupTableVisualizer as Lutvis
