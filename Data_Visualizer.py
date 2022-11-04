@@ -94,17 +94,31 @@ class Data_Visualizer:
         """
 
         try:
-            image[np.where((image==[1,1,1]).all(axis=2))] = [255,255,255]
-            image = cv2.resize(image,(self.output_width,self.output_height))
-            w,h,c = image.shape
-            image[0:self.markersize,0:self.markersize] = self.increase_brightness(self.ar0,value=self.brightness_add)
-            image[w-self.markersize:w,0:self.markersize] = self.increase_brightness(self.ar1,value=self.brightness_add)
-            image[0:self.markersize, h-self.markersize:h] = self.increase_brightness(self.ar2,value=self.brightness_add)
-            image[w-self.markersize:w,h-self.markersize:h] = self.increase_brightness(self.ar3,value=self.brightness_add)
-            self.current_image_full = np.zeros((1920,1080,3),dtype=np.uint8)
-            return image 
+            #print(np.max(image,axis=-2), np.min(image,axis=-2))
+            if ( np.max(image,axis=-2).all()== np.min(image,axis=-2).all()):
+                print("one color image")
+                image = np.zeros((self.output_height,self.output_width,3),dtype=np.uint8)
+                image[np.where((image==[0,0,0]).all(axis=2))] = [255,255,255]
+                w,h,c = image.shape
+                image[0:self.markersize,0:self.markersize] = self.ar0
+                image[w-self.markersize:w,0:self.markersize] = self.ar1
+                image[0:self.markersize, h-self.markersize:h] = self.ar2
+                image[w-self.markersize:w,h-self.markersize:h] = self.ar3
+                return image 
+            else:
+
+                image[np.where((image==[0,0,0]).all(axis=2))] = [255,255,255]
+                image = cv2.resize(image,(self.output_width,self.output_height))
+                w,h,c = image.shape
+                image[0:self.markersize,0:self.markersize] = self.increase_brightness(self.ar0,value=self.brightness_add)
+                image[w-self.markersize:w,0:self.markersize] = self.increase_brightness(self.ar1,value=self.brightness_add)
+                image[0:self.markersize, h-self.markersize:h] = self.increase_brightness(self.ar2,value=self.brightness_add)
+                image[w-self.markersize:w,h-self.markersize:h] = self.increase_brightness(self.ar3,value=self.brightness_add)
+                self.current_image_full = np.zeros((1920,1080,3),dtype=np.uint8)
+                return image 
         except Exception as ex:
-            image = np.zeros((self.output_width,self.output_height,3),dtype=np.uint8)
+            print("DATA VIS ERROR", ex)
+            image = np.zeros((self.output_height,self.output_width,3),dtype=np.uint8)
             image[np.where((image==[0,0,0]).all(axis=2))] = [255,255,255]
             w,h,c = image.shape
             image[0:self.markersize,0:self.markersize] = self.ar0
