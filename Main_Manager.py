@@ -15,7 +15,7 @@ class Main_Manager:
 
         self.Interpreted_Queue = mp.Queue()
 
-        self.Data_Getter = dg.Data_Getter(3,self.Raw_Queue)
+        self.Data_Getter = dg.Data_Getter(1,self.Raw_Queue)
 
         self.Getter_Process = mp.Process(target = self.Data_Getter.get_Data)
         self.Getter_Process.start()
