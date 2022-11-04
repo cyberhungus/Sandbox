@@ -11,7 +11,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QColorDialog, QF
 from PyQt5.QtGui import QIcon , QColor 
 from PIL import Image
 from PyQt5 import QtWidgets, QtGui
-
+from PyQt5 import QtTest
 from PIL import Image, ImageQt
 import numpy as np
 import cv2 as cv
@@ -275,30 +275,22 @@ class Ui_MainWindow(object):
                 try:
                     h,w , d = img.shape
 
-                    print(w,h)
+                   # print(w,h)
                     upColor = img[int(self.rowOffset)-1][int((w/self.number_leds)*led)-1]
                     downColor = img[int(h-self.rowOffset)-1][int((w/self.number_leds)*led)-1]
                     self.upperRow.append(upColor)
                    
                     if self.serial.serialStarted == True:
                        # print(led)
-                         self.startLightWorker(led,upColor[2], upColor[1], upColor[0])
-                         self.startLightWorker(led+self.number_leds,downColor[2], downColor[1], downColor[0])
-                        #self.serial.sendLightMessage(led+self.number_leds,downColor[2], downColor[1], downColor[0])
-                        #sleep(0.005)
+                        
+                        self.serial.sendLightMessage(led+self.number_leds,downColor[2], downColor[1], downColor[0])
+                        QtTest.QTest.qWait(5)
+                        self.serial.sendLightMessage(led,upColor[2], upColor[1], upColor[0])
+                        QtTest.QTest.qWait(5)
                 except Exception as ex:
                     print("Catch" , ex)
 
-    def startLightWorker(self, led, r, g, b):
-        thread = QThread()
-        serialworker = SerialWorker()
-        serialworker.set_values(self.serial, led, b,g,r)
-        serialworker.moveToThread(thread)
-        thread.started.connect(serialworker.run)
-        serialworker.finished.connect(thread.quit)
-        serialworker.finished.connect(serialworker.deleteLater)
-        thread.finished.connect(thread.deleteLater)
-        thread.start()
+
 
     def reportMarkers(self, value):
         if type(value)==type("String"):
@@ -538,14 +530,3 @@ class PipeWorker(QObject):
         self.finished.emit()
 
 
-
-class SerialWorker(QObject):
-
-    finished = pyqtSignal()    
-    def set_values(self,serial, led, red, green, blue):
-        self.serial, self.led, self.red, self.green, self.blue =serial, led, red, green, blue
-
-    def run(self,):
-        self.serial.sendLightMessage(self.led, self.blue, self.green, self.red )
-        sleep(0.005)
-        self.finished.emit()
