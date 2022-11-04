@@ -32,7 +32,7 @@ class Data_Interpreter(Thread):
         self.border_mask = 0
               
         #Region storing variables 
-        self.lineBrown = (0,0,0)
+        self.lineBrown = (1,1,1)
         self.colorA = (255,255,255)
         self.colorB = (255,255,255)
         self.colorC = (255,255,255)
@@ -111,13 +111,14 @@ class Data_Interpreter(Thread):
                     #depth = self.four_point_transform(new_data[0],self.maskpoints)
 
                     depth=new_data[0]
-
+                    color = new_data[1]
                     depth = self.applymask(depth)
- 
+                    
                     processed_data_depth = self.height_transform_lut(depth)
                     if self.heightLineMode==True:
                         processed_data_depth = self.draw_height_lines(processed_data_depth)
-                    full_img = self.process_aruco(new_data[1],processed_data_depth)
+
+                    full_img = self.process_aruco(color,processed_data_depth)
                    # cv.imshow("LUT", Lutvis.showLUT(self.lookup_table))
                     #cv.waitKey(1)
                  
@@ -263,8 +264,8 @@ class Data_Interpreter(Thread):
             if len(arucofound[0])!=0:
                 for bbox, id in zip(arucofound[0], arucofound[1]):
 
-                    if id not in range(0,4):
-                        print("Proces Aruco" , bbox,id)
+                    if id < 5:
+                        #print("Proces Aruco" , bbox,id)
                         if id == 10 :   
                             new_img = self.arucoAug(bbox, new_img, self.houseIMG, expandSize=50)
                         elif id == 9:

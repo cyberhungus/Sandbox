@@ -51,7 +51,8 @@ class SerialConnector:
             try:
                 bytes = self.ser.read(self.ser.inWaiting())
                 if len(bytes)>0:
-                    print("Arduino is sending:", bytes)
+                    pass
+                    #print("Arduino is sending:", bytes)
                 sleep(0.01)
             except:
                 self.serialStarted = False
