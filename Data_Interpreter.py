@@ -123,6 +123,10 @@ class Data_Interpreter(Thread):
                  
                    
                     self.queue.put_nowait(("FULL",full_img))
+
+
+
+                   
                     self.output.put_nowait(("ANALYZED",full_img))
 
                    # print("Time for color convert algorithm :", timeit.default_timer() - starttime)
@@ -466,8 +470,17 @@ class Data_Interpreter(Thread):
       #  data = data.astype(np.uint8)
        # data = cv.convertScaleAbs(data,alpha=self.depthBrightness)
        # print("HEIHGT TRANSFROM SHAPRE ", data.shape, data)
-        self.output.put_nowait(("DEPTH",data))
-        return cv.LUT(data,self.lookup_table)
+
+        if ( np.max(data,axis=-2).all() == np.min(data,axis=-2).all()):
+            print("one color image")
+            image = np.zeros((1080,1920,3),dtype=np.uint8)
+            image[np.where((image==[0,0,0]).all(axis=2))] = [255,255,255]
+            self.output.put_nowait(("DEPTH",image))
+            return image
+        else:
+
+            self.output.put_nowait(("DEPTH",data))
+            return cv.LUT(data,self.lookup_table)
 
 
     def rgba_help(self, color, a_val):
