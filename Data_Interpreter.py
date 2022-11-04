@@ -41,6 +41,7 @@ class Data_Interpreter(Thread):
         self.colorF = (255,255,255)
         self.colorF = (255,255,255)
         self.colorG = (255,255,255)
+        self.colorWhite = (255,255,255)
         self.colorWater = (255,255,255)
         self.colorDeepWater = (255,255,255)
 
@@ -222,19 +223,22 @@ class Data_Interpreter(Thread):
         
         """
 
+        try:
+            img = np.zeros((1080,1920,3),dtype=np.uint8)
+            img[np.where((img == [0,0,0] ).all(axis = 2))] = [255,255,255]
+            h, w, c = imgAug.shape
+            pts1 = np.array(np.array(self.maskpoints)+(self.firstOffset,self.secondOffset))
+           # pts2 = np.float32([[0,0], [w,0], [w,h], [0,h]])
+            pts2 = np.float32([[0,0], [h,0], [h,w], [0,w]])
 
-        img = np.zeros((1080,1920,3),dtype=np.uint8)
-        img[np.where((img == [0,0,0] ).all(axis = 2))] = [255,255,255]
-        h, w, c = imgAug.shape
-        pts1 = np.array(np.array(self.maskpoints)+(self.firstOffset,self.secondOffset))
-       # pts2 = np.float32([[0,0], [w,0], [w,h], [0,h]])
-        pts2 = np.float32([[0,0], [h,0], [h,w], [0,w]])
-
-        matrix, _ = cv.findHomography(pts1, pts2)
-        imgout = cv.warpPerspective(imgAug, matrix, (img.shape[1], img.shape[0]))
-       # cv.fillConvexPoly(img, pts1.astype(int), (0, 0, 0))
-        imgout = img + imgout
-        return imgout
+            matrix, _ = cv.findHomography(pts1, pts2)
+            imgout = cv.warpPerspective(imgAug, matrix, (img.shape[1], img.shape[0]))
+           # cv.fillConvexPoly(img, pts1.astype(int), (0, 0, 0))
+            imgout = img + imgout
+            return imgout
+        except Exception as ex:
+            img = np.zeros((1080,1920,3),dtype=np.uint8)
+            return img
 
     def process_aruco(self, img_rgb, img_depth):
         """Wraps the Aruco detection and augmentation functionalities in a single function. Places the augmentation images on the depth data image. 
@@ -264,7 +268,7 @@ class Data_Interpreter(Thread):
                         elif id == 8 :   
                             new_img = self.arucoAug(bbox, new_img, self.logoIMG, expandSize=50)
                         elif id == 7 :   
-                            new_img = self.arucoAug(bbox, new_img, self.houseIMG, expandSize=50)
+                            new_img = self.arucoAug(bbox, new_img, self.asphaltIMG, expandSize=50)
                 return new_img
             else:
                 return new_img
@@ -415,8 +419,10 @@ class Data_Interpreter(Thread):
                 color_table.append(self.colorE)
             elif num in range(int(self.waterlevel+remainder*5),int(self.waterlevel+remainder*6)):
                 color_table.append(self.colorF)   
-            elif num in range(int(self.waterlevel+remainder*6),int(255)):
+            elif num in range(int(self.waterlevel+remainder*6),int(254)):
                 color_table.append(self.colorG)
+            elif num == 255:
+                color_table.append(self.colorWhite)
 
             lookup_table[num,0,0]= color_table[num][0]
             lookup_table[num,0,1]=color_table[num][1]
