@@ -11,11 +11,14 @@ from threading import Thread
 class Main_Manager:
     def __init__(self):
         self.Raw_Queue = mp.Queue()
+
         self.FrontendQueue = mp.Queue()
+
+        self.ControlQueue = mp.Queue()
 
         self.Interpreted_Queue = mp.Queue()
 
-        self.Data_Getter = dg.Data_Getter(1,self.Raw_Queue)
+        self.Data_Getter = dg.Data_Getter(1,self.Raw_Queue, self.ControlQueue)
 
         self.Getter_Process = mp.Process(target = self.Data_Getter.get_Data)
         self.Getter_Process.start()
@@ -39,7 +42,7 @@ class Main_Manager:
     def update_settings_hook(self,settings_dict):
         for item in settings_dict.items():
             self.Raw_Queue.put_nowait((item[0],item[1]))
-        self.Data_Getter.update_refresh_rate(settings_dict['refreshRate'])
+        self.ControlQueue.put_nowait("REFRESHRATE" ,settings_dict['refreshRate'])
         self.Interpreted_Queue.put_nowait(("SHOW_MARKERS",settings_dict['displayMarkers']))
         self.Interpreted_Queue.put_nowait(("MARKER_SIZE",settings_dict['markerSize']))
         self.Interpreted_Queue.put_nowait(("BRIGHTNESS",settings_dict['addBrightness']))

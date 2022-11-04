@@ -274,15 +274,11 @@ class Ui_MainWindow(object):
             for led in range(0,self.number_leds+1):
                 try:
                     h,w , d = img.shape
-
-                   # print(w,h)
                     upColor = img[int(self.rowOffset)-1][int((w/self.number_leds)*led)-1]
                     downColor = img[int(h-self.rowOffset)-1][int((w/self.number_leds)*led)-1]
                     self.upperRow.append(upColor)
                    
                     if self.serial.serialStarted == True:
-                       # print(led)
-                        
                         self.serial.sendLightMessage(led+self.number_leds,downColor[2], downColor[1], downColor[0])
                         QtTest.QTest.qWait(5)
                         self.serial.sendLightMessage(led,upColor[2], upColor[1], upColor[0])
