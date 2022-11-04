@@ -262,17 +262,17 @@ class Data_Interpreter(Thread):
         arucofound = self.findArucoMarkers(img)
         if arucofound:
             if len(arucofound[0])!=0:
-                for bbox, id in zip(arucofound[0], arucofound[1]):
+                for bbox, codeid in zip(arucofound[0], arucofound[1]):
 
-                    if id < 5:
+                    if codeid > 5:
                         #print("Proces Aruco" , bbox,id)
-                        if id == 10 :   
+                        if codeid == 10 :   
                             new_img = self.arucoAug(bbox, new_img, self.houseIMG, expandSize=50)
-                        elif id == 9:
+                        elif codeid == 9:
                             new_img = self.arucoAug(bbox, new_img, self.gardenIMG, expandSize= 40)
-                        elif id == 8 :   
+                        elif codeid == 8 :   
                             new_img = self.arucoAug(bbox, new_img, self.logoIMG, expandSize=50)
-                        elif id == 7 :   
+                        elif codeid == 7 :   
                             new_img = self.arucoAug(bbox, new_img, self.asphaltIMG, expandSize=50)
                 return new_img
             else:
