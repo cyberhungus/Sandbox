@@ -94,8 +94,9 @@ class Data_Visualizer:
         """
 
         try:
-            #print(np.max(image,axis=-2), np.min(image,axis=-2))
-
+            if np.max(image,axis=-2).all()== np.min(image,axis=-2).all():
+                print(np.max(image,axis=-2)[0])
+                image[np.where((image==np.max(image,axis=-2)[0]).all(axis=2))] = [255,255,255]
 
             image[np.where((image==[0,0,0]).all(axis=2))] = [255,255,255]
             image = cv2.resize(image,(self.output_width,self.output_height))

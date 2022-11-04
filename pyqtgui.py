@@ -270,21 +270,25 @@ class Ui_MainWindow(object):
     def receiveRGBImage(self, img):
         self.upperRow = []
         self.lowerRow = []
-        if self.imgmode == True:
+        if self.imgmode == True:            
             for led in range(0,self.number_leds+1):
                 try:
-                    w, h , d = img.shape
-                    upColor = img[int((w/self.number_leds)*led)-1][int(self.rowOffset)-1]
+                    h,w , d = img.shape
+
+                    print(w,h)
+                    upColor = img[int(self.rowOffset)-1][int((w/self.number_leds)*led)-1]
+                    downColor = img[int(h-self.rowOffset)-1][int((w/self.number_leds)*led)-1]
                     self.upperRow.append(upColor)
-                    downColor =  img[int((w/self.number_leds)*led)-1][int(h-self.rowOffset)-1]
-                    self.lowerRow.append(downColor)
+                   
                     if self.serial.serialStarted == True:
                        # print(led)
                         self.serial.sendLightMessage(led,upColor[2], upColor[1], upColor[0])
                         sleep(0.005)
-                        self.serial.sendLightMessage(led+self.number_leds,upColor[2], upColor[1], upColor[0])
+                        self.serial.sendLightMessage(led+self.number_leds,downColor[2], downColor[1], downColor[0])
+                        sleep(0.005)
                 except Exception as ex:
                     print("Catch" , ex)
+
 
 
     def reportMarkers(self, value):
